@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width">
     <title>디자인 시스템 가이드</title>
-    <link rel="shortcut icon" type="image/x-icon" href="./images/favicon.ico"/>	
+    <link rel="shortcut icon" type="image/x-icon" href="./images/favicon.ico"/>
     <!-- css -->
     <link href="./css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="./css/common.css">
@@ -68,26 +68,134 @@
       }
 
       // 아이콘 스타일 복사 (이미지형)
-      function CopyIconImg(TextToCopy) {
-        var TempText = document.createElement("input");
-        TempText.value = TextToCopy;
-        document.body.appendChild(TempText);
-        TempText.select();
-        document.execCommand("copy");
-        document.body.removeChild(TempText);
-        // alert("Copied the text: " + TempText.value);
-        document.getElementById("icon-box-noti-img").style.display = "inline";
-        document.execCommand("copy");
-        setTimeout( function() {
-            document.getElementById("icon-box-noti-img").style.display = "none";
-        }, 1800);
-      }
+      // function CopyIconImg(TextToCopy) {
+      //   var TempText = document.createElement("input");
+      //   TempText.value = TextToCopy;
+      //   document.body.appendChild(TempText);
+      //   TempText.select();
+      //   document.execCommand("copy");
+      //   document.body.removeChild(TempText);
+      //   document.getElementById("icon-box-noti-img").style.display = "inline";
+      //   document.execCommand("copy");
+      //   setTimeout( function() {
+      //       document.getElementById("icon-box-noti-img").style.display = "none";
+      //   }, 1800);
+      // }
 
       document.querySelectorAll(".design-system-guide .cont-area .group-tt").forEach((i) => {
         const observer = new IntersectionObserver(([i]) => i.target.classList.toggle("active", i.intersectionRatio < 1),
         {threshold: [1]});
         observer.observe(i);
       })
+    </script>
+    <script>
+      // 비동기 클립보드 API를 사용하기 위한 함수 (이전과 동일)
+async function copyImageToClipboard(imgBlob) {
+    try {
+        const item = new ClipboardItem({ "image/png": imgBlob });
+        await navigator.clipboard.write([item]);
+        console.log("Image copied successfully!");
+        return true;
+    } catch (err) {
+        console.error("Failed to copy image: ", err);
+        // 사용자에게 복사 실패 알림
+        alert("브라우저 보안 정책상 이미지를 자동으로 복사하지 못했어 ㅠㅠ 직접 붙여넣기를 시도해 줘!");
+        return false;
+    }
+}
+
+// SVG/PNG 이미지 URL을 캔버스에 그려서 PNG Blob으로 변환하는 함수
+// 이제 fallbackWidth/Height는 src 이미지의 naturalWidth/Height를 사용하므로 필요 없음.
+function imgUrlToPngBlob(imgUrl, scale = 1) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        // CORS 문제가 발생할 경우를 대비하여 설정 (다른 도메인 이미지 로딩 시 필요)
+        img.crossOrigin = 'anonymous'; 
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            
+            // 이미지 원본 크기 가져오기
+            const originalWidth = img.naturalWidth;
+            const originalHeight = img.naturalHeight;
+
+            // 캔버스 크기를 원본 * 확대 비율로 설정
+            canvas.width = originalWidth * scale;
+            canvas.height = originalHeight * scale;
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // 배경 투명하게
+            
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    resolve(blob);
+                } else {
+                    reject(new Error("캔버스에서 PNG 이미지 변환에 실패했어 ㅠㅠ"));
+                }
+            }, 'image/png'); // PNG 형식으로 저장
+        };
+
+        img.onerror = (err) => {
+            console.error("이미지 로드 중 에러: ", err);
+            reject(new Error("아이콘 이미지(" + imgUrl + ")를 로드할 수 없어 ㅠㅠ"));
+        };
+        
+        // 이미지 src 설정
+        img.src = imgUrl;
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    // .copy-img-btn 클래스가 붙은 모든 <img> 태그를 선택
+    const imageIcons = document.querySelectorAll('.copy-img-btn'); 
+    const notiElement = document.getElementById("icon-box-noti-img"); // 알림 요소
+
+    imageIcons.forEach(imgElement => {
+        imgElement.addEventListener('click', async (event) => {
+            event.stopPropagation(); // 이벤트 버블링 방지
+            
+            // 클릭된 <img> 태그의 src 속성 가져오기
+            const imgUrl = imgElement.src; 
+
+            if (!imgUrl) {
+                console.error("이미지 src를 찾을 수 없어 ㅠㅠ");
+                if (notiElement) {
+                    notiElement.querySelector('p').textContent = "⚠️ 이미지 src를 찾을 수 없어!";
+                    notiElement.style.display = "inline";
+                    setTimeout(() => { notiElement.style.display = "none"; }, 1800);
+                }
+                return;
+            }
+
+            try {
+                // 이미지를 3배수 PNG Blob으로 변환
+                const pngBlob = await imgUrlToPngBlob(imgUrl, 3); // 3배 확대!
+                
+                // PNG Blob을 클립보드에 복사
+                const copied = await copyImageToClipboard(pngBlob);
+
+                // 복사 알림 표시
+                if (copied && notiElement) {
+                    notiElement.querySelector('p').textContent = "✨ 아이콘이 클립보드에 복사되었어! ✨";
+                    notiElement.style.display = "inline";
+                    setTimeout(() => {
+                        notiElement.style.display = "none";
+                    }, 1800);
+                }
+            } catch (error) {
+                console.error("아이콘 복사 처리 중 문제 발생: ", error);
+                if (notiElement) {
+                    notiElement.querySelector('p').textContent = "⚠️ 복사 실패: " + error.message;
+                    notiElement.style.display = "inline";
+                    setTimeout(() => { notiElement.style.display = "none"; }, 3000);
+                }
+            }
+        });
+    });
+});
     </script>
 </head>
 <body data-spy="scroll" data-target="#scrollspy-guide-menu" data-offset="35">
@@ -690,287 +798,287 @@
         </div>
         <div class="icon-box img">
           <div class="noti-box">
-            <div id="icon-box-noti-img" class="icon-box-noti"><p class="noti-point">이미지명.svg</p>복사했습니다!</div>
+            <div id="icon-box-noti-img" class="icon-box-noti" style="display:none;"><p class="noti-point">✨ 아이콘이 클립보드에 복사되었어요! ✨</div>
           </div>
           <ul>
-	    <li><img src="./icon/ico-unipost-symbol.svg" onclick="CopyIconImg('ico-unipost-symbol.svg')"/><div class="keyword"><span>logo</span><span>unipost</span><span>로고</span><span>유니포스트</span></div></li>
-            <li><img src="./images/uni-main-pes2.svg" onclick="CopyIconImg('uni-main-pes2.svg')"/><div class="keyword"><span>pes</span><span>경비처리</span></div></li>
-            <li><img src="./images/uni-main-approval2.svg" onclick="CopyIconImg('uni-main-approval2.svg')"/><div class="keyword"><span>approval</span><span>전자결재</span></div></li>
-            <li><img src="./images/uni-main-avs2.svg" onclick="CopyIconImg('uni-main-avs2.svg')"/><div class="keyword"><span>avs</span><span>인사관리</span></div></li>
-            <li><img src="./images/uni-main-lc2.svg" onclick="CopyIconImg('uni-main-lc2.svg')"/><div class="keyword"><span>lc</span><span>근로계약</span></div></li>
-            <li><img src="./images/uni-main-community2.svg" onclick="CopyIconImg('uni-main-community2.svg')"/><div class="keyword"><span>community</span><span>커뮤니티</span></div></li>
-            <li><img src="./images/uni-main-admin2.svg" onclick="CopyIconImg('uni-main-admin2.svg')"/><div class="keyword"><span>admin</span><span>관리자</span></div></li>
-            <li><img src="./images/uni-main-econ2.svg" onclick="CopyIconImg('uni-main-econ2.svg')"/><div class="keyword"><span>econ</span><span>전자계약</span></div></li>
-            <li><img src="./images/uni-main-system2.svg" onclick="CopyIconImg('uni-main-system2.svg')"/><div class="keyword"><span>system</span><span>시스템</span></div></li>
-            <li><img src="./images/uni-main-tax2.svg" onclick="CopyIconImg('uni-main-tax2.svg')"/><div class="keyword"><span>tax</span><span>세금계산서</span></div></li>
-	  </ul>
+            <li><img src="./icon/ico-unipost-symbol.svg" class="copy-img-btn"/><div class="keyword"><span>logo</span><span>unipost</span><span>로고</span><span>유니포스트</span></div></li>
+            <li><img src="./images/uni-main-pes2.svg" class="copy-img-btn"/><div class="keyword"><span>pes</span><span>경비처리</span></div></li>
+            <li><img src="./images/uni-main-approval2.svg" class="copy-img-btn"/><div class="keyword"><span>approval</span><span>전자결재</span></div></li>
+            <li><img src="./images/uni-main-avs2.svg" class="copy-img-btn"/><div class="keyword"><span>avs</span><span>인사관리</span></div></li>
+            <li><img src="./images/uni-main-lc2.svg" class="copy-img-btn"/><div class="keyword"><span>lc</span><span>근로계약</span></div></li>
+            <li><img src="./images/uni-main-community2.svg" class="copy-img-btn"/><div class="keyword"><span>community</span><span>커뮤니티</span></div></li>
+            <li><img src="./images/uni-main-admin2.svg" class="copy-img-btn"/><div class="keyword"><span>admin</span><span>관리자</span></div></li>
+            <li><img src="./images/uni-main-econ2.svg" class="copy-img-btn"/><div class="keyword"><span>econ</span><span>전자계약</span></div></li>
+            <li><img src="./images/uni-main-system2.svg" class="copy-img-btn"/><div class="keyword"><span>system</span><span>시스템</span></div></li>
+            <li><img src="./images/uni-main-tax2.svg" class="copy-img-btn"/><div class="keyword"><span>tax</span><span>세금계산서</span></div></li>
+          </ul>
           <ul>
-            <li><img src="./icon/uni-main-pes.svg" onclick="CopyIconImg('uni-main-pes.svg')"/><div class="keyword"><span>pes</span><span>경비처리</span></div></li>
-            <li><img src="./icon/uni-main-lc.svg" onclick="CopyIconImg('uni-main-lc.svg')"/><div class="keyword"><span>lc</span><span>근로계약</span></div></li>
-            <li><img src="./icon/uni-main-econ.svg" onclick="CopyIconImg('uni-main-econ.svg')"/><div class="keyword"><span>econ</span><span>전자계약</span></div></li>
-            <li><img src="./icon/uni-main-approval.svg" onclick="CopyIconImg('uni-main-approval.svg')"/><div class="keyword"><span>approval</span><span>전자결재</span></div></li>
-            <li><img src="./icon/uni-main-community.svg" onclick="CopyIconImg('uni-main-community.svg')"/><div class="keyword"><span>community</span><span>커뮤니티</span></div></li>
-            <li><img src="./icon/uni-main-tax.svg" onclick="CopyIconImg('uni-main-tax.svg')"/><div class="keyword"><span>tax</span><span>세금계산서</span></div></li>
-            <li><img src="./icon/uni-main-wps.svg" onclick="CopyIconImg('uni-main-wps.svg')"/><div class="keyword"><span>community</span><span>커뮤니티</span></div></li>
-            <li><img src="./icon/uni-main-avs.svg" onclick="CopyIconImg('uni-main-avs.svg')"/><div class="keyword"><span>avs</span><span>인사관리</span></div></li>
-            <li><img src="./icon/uni-thumb-user.svg" onclick="CopyIconImg('uni-thumb-user.svg')"/><div class="keyword"><span>thumbnail</span><span>user</span><span>썸네일</span><span>사람</span></div></li>
-            <li><img src="./icon/uni-thumb-user02.svg" onclick="CopyIconImg('uni-thumb-user02.svg')"/><div class="keyword"><span>thumbnail</span><span>user</span><span>썸네일</span><span>사람</span></div></li>
-            <li><img src="./icon/uni-thumb-user03.svg" onclick="CopyIconImg('uni-thumb-user03.svg')"/><div class="keyword"><span>thumbnail</span><span>user</span><span>썸네일</span><span>사람</span></div></li>
-            <li><img src="./icon/uni-thumb-user04.svg" onclick="CopyIconImg('uni-thumb-user04.svg')"/><div class="keyword"><span>thumbnail</span><span>user</span><span>썸네일</span><span>사람</span></div></li>
-            <li><img src="./icon/uni-company2.svg" onclick="CopyIconImg('uni-company2.svg')"/><div class="keyword"><span>building</span><span>company</span><span>건물</span><span>회사</span></div></li>
-            <li><img src="./icon/uni-user02.svg" onclick="CopyIconImg('uni-user02.svg')"/><div class="keyword"><span>user</span><span>person</span><span>human</span><span>사람</span><span>한명</span></div></li>
-            <li><img src="./icon/uni-user-business.svg" onclick="CopyIconImg('uni-user-business.svg')"/><div class="keyword"><span>user</span><span>necktie</span><span>business</span><span>사람</span><span>회사원</span></div></li>
-            <li><img src="./icon/uni-user-smile.svg" onclick="CopyIconImg('uni-user-smile.svg')"/><div class="keyword"><span>user</span><span>smile</span><span>사람</span><span>한명</span></div></li>
-            <li><img src="./icon/uni-doc-empty.svg" onclick="CopyIconImg('uni-doc-empty.svg')"/><div class="keyword"><span>doc</span><span>empty</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-doc.svg" onclick="CopyIconImg('uni-doc.svg')"/><div class="keyword"><span>doc</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-docs.svg" onclick="CopyIconImg('uni-docs.svg')"/><div class="keyword"><span>doc</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-doc-coin.svg" onclick="CopyIconImg('uni-doc-coin.svg')"/><div class="keyword"><span>doc</span><span>coin</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-download-doc.svg" onclick="CopyIconImg('uni-download-doc.svg')"/><div class="keyword"><span>doc</span><span>download</span><span>다운로드</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-no-doc1.svg" onclick="CopyIconImg('uni-no-doc1.svg')"/><div class="keyword"><span>doc</span><span>caution</span><span>error</span><span>주의</span><span>오류</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-no-doc2.svg" onclick="CopyIconImg('uni-no-doc2.svg')"/><div class="keyword"><span>doc</span><span>caution</span><span>error</span><span>주의</span><span>오류</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-preview.svg" onclick="CopyIconImg('uni-preview.svg')"/><div class="keyword"><span>doc</span><span>search</span><span>preview</span><span>미리보기</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-preview2.svg" onclick="CopyIconImg('uni-preview2.svg')"/><div class="keyword"><span>doc</span><span>search</span><span>preview</span><span>미리보기</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-doc-check.svg" onclick="CopyIconImg('uni-doc-check.svg')"/><div class="keyword"><span>doc</span><span>check</span><span>문서</span><span>체크</span></div></li>
-            <li><img src="./icon/uni-doc-plus.svg" onclick="CopyIconImg('uni-doc-plus.svg')"/><div class="keyword"><span>doc</span><span>plus</span><span>문서</span><span>추가</span></div></li>
-            <li><img src="./icon/uni-fin.svg" onclick="CopyIconImg('uni-fin.svg')"/><div class="keyword"><span>fin</span><span>doc</span><span>check</span><span>문서</span><span>완료</span></div></li>
-            <li><img src="./icon/uni-view-receipt.svg" onclick="CopyIconImg('uni-view-receipt.svg')"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-receipt.svg" onclick="CopyIconImg('uni-receipt.svg')"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-calc-receipt.svg" onclick="CopyIconImg('uni-calc-receipt.svg')"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-check-receipt.svg" onclick="CopyIconImg('uni-check-receipt.svg')"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-calc-check.svg" onclick="CopyIconImg('uni-calc-check.svg')"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-money-in-out.svg" onclick="CopyIconImg('uni-money-in-out.svg')"/><div class="keyword"><span>doc</span><span>coin</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-money-in.svg" onclick="CopyIconImg('uni-money-in.svg')"/><div class="keyword"><span>doc</span><span>coin</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-no-receipt2.svg" onclick="CopyIconImg('uni-no-receipt2.svg')"/><div class="keyword"><span>no</span><span>blank</span><span>receipt</span><span>doc</span><span>없음</span><span>오류</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-no-receipt3.svg" onclick="CopyIconImg('uni-no-receipt3.svg')"/><div class="keyword"><span>no</span><span>blank</span><span>receipt</span><span>doc</span><span>없음</span><span>오류</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-money-out.svg" onclick="CopyIconImg('uni-money-out.svg')"/><div class="keyword"><span>doc</span><span>coin</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-doc-tax-money.svg" onclick="CopyIconImg('uni-doc-tax-money.svg')"/><div class="keyword"><span>doc</span><span>tax</span><span>문서</span><span>세금계산서</span></div></li>
-            <li><img src="./icon/uni-doc-noti.svg" onclick="CopyIconImg('uni-doc-noti.svg')"/><div class="keyword"><span>doc</span><span>noti</span><span>문서</span><span>알림</span></div></li>
-            <li><img src="./icon/uni-doc-qna.svg" onclick="CopyIconImg('uni-doc-qna.svg')"/><div class="keyword"><span>doc</span><span>qna</span><span>문서</span><span>질문답변</span></div></li>
-            <li><img src="./icon/uni-doc-talk.svg" onclick="CopyIconImg('uni-doc-talk.svg')"/><div class="keyword"><span>doc</span><span>talk</span><span>speech-bubble</span><span>문서</span><span>말풍선</span></div></li>
-            <li><img src="./icon/uni-doc-user-smile.svg" onclick="CopyIconImg('uni-doc-user-smile.svg')"/><div class="keyword"><span>doc</span><span>user</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-service-link1.svg" onclick="CopyIconImg('uni-service-link1.svg')"/><div class="keyword"><span>doc</span><span>tax</span><span>세금계산서</span></div></li>
-            <li><img src="./icon/uni-service-link2.svg" onclick="CopyIconImg('uni-service-link2.svg')"/><div class="keyword"><span>doc</span><span>tax</span><span>세금계산서</span></div></li>
-            <li><img src="./icon/uni-service-link3.svg" onclick="CopyIconImg('uni-service-link3.svg')"/><div class="keyword"><span>doc</span><span>receipt</span><span>문서</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-service-link4.svg" onclick="CopyIconImg('uni-service-link4.svg')"/><div class="keyword"><span>doc</span><span>contract</span><span>문서</span><span>계약서</span></div></li>
-            <li><img src="./icon/uni-signature.svg" onclick="CopyIconImg('uni-signature.svg')"/><div class="keyword"><span>doc</span><span>signature</span><span>서명</span><span>싸인</span></div></li>
-            <li><img src="./icon/uni-receipt2.svg" onclick="CopyIconImg('uni-receipt2.svg')"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-no-receipt4.svg" onclick="CopyIconImg('uni-no-receipt4.svg')"/><div class="keyword"><span>no</span><span>blank</span><span>receipt</span><span>doc</span><span>없음</span><span>오류</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-content-empty.svg" onclick="CopyIconImg('uni-content-empty.svg')"/><div class="keyword"><span>doc</span><span>empty</span><span>빈페이지</span><span>없음</span></div></li>
-            <li><img src="./icon/uni-doc-storage-check.svg" onclick="CopyIconImg('uni-doc-storage-check.svg')"/><div class="keyword"><span>doc</span><span>storage</span><span>check</span><span>문서</span><span>문서함</span></div></li>
-            <li><img src="./icon/uni-doc-storage-plus.svg" onclick="CopyIconImg('uni-doc-storage-plus.svg')"/><div class="keyword"><span>doc</span><span>storage</span><span>plus</span><span>문서</span><span>문서함</span></div></li>
-            <li><img src="./icon/uni-doc-storage-upload.svg" onclick="CopyIconImg('uni-doc-storage-upload.svg')"/><div class="keyword"><span>doc</span><span>storage</span><span>upload</span><span>문서</span><span>문서함</span></div></li>
-            <li><img src="./icon/uni-graph.svg" onclick="CopyIconImg('uni-graph.svg')"/><div class="keyword"><span>graph</span><span>그래프</span></div></li>
-            <li><img src="./icon/uni-graph-up.svg" onclick="CopyIconImg('uni-graph-up.svg')"/><div class="keyword"><span>graph</span><span>그래프</span></div></li>
-            <li><img src="./icon/uni-main-unidocu.svg" onclick="CopyIconImg('uni-main-unidocu.svg')"/><div class="keyword"><span>doc</span><span>monitor</span><span>모니터</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-main-unidocu-off.svg" onclick="CopyIconImg('uni-main-unidocu-off.svg')"/><div class="keyword"><span>doc</span><span>monitor</span><span>모니터</span><span>문서</span></div></li>
-            <li><img src="./icon/uni-report-user.svg" onclick="CopyIconImg('uni-report-user.svg')"/><div class="keyword"><span>monitor</span><span>모니터</span><span>사람</span></div></li>
-            <li><img src="./icon/uni-report.svg" onclick="CopyIconImg('uni-report.svg')"/><div class="keyword"><span>monitor</span><span>모니터</span><span>그래프</span></div></li>
-            <li><img src="./icon/uni-monitor.svg" onclick="CopyIconImg('uni-monitor.svg')"/><div class="keyword"><span>monitor</span><span>모니터</span></div></li>
-            <li><img src="./icon/uni-monitor2.svg" onclick="CopyIconImg('uni-monitor2.svg')"/><div class="keyword"><span>monitor</span><span>모니터</span><span>작성</span></div></li>
-            <li><img src="./icon/uni-set.svg" onclick="CopyIconImg('uni-set.svg')"/><div class="keyword"><span>set</span><span>관리</span><span>설정</span></div></li>
-            <li><img src="./icon/uni-manage.svg" onclick="CopyIconImg('uni-manage.svg')"/><div class="keyword"><span>manage</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-monitor.svg" onclick="CopyIconImg('uni-manage-monitor.svg')"/><div class="keyword"><span>manage</span><span>monitor</span><span>모니터</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-site.svg" onclick="CopyIconImg('uni-manage-site.svg')"/><div class="keyword"><span>manage</span><span>monitor</span><span>모니터</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-org-chart.svg" onclick="CopyIconImg('uni-manage-org-chart.svg')"/><div class="keyword"><span>manage</span><span>folder</span><span>폴더</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-org-chart2.svg" onclick="CopyIconImg('uni-manage-org-chart2.svg')"/><div class="keyword"><span>manage</span><span>folder</span><span>폴더</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-user2.svg" onclick="CopyIconImg('uni-manage-user2.svg')"/><div class="keyword"><span>manage</span><span>user</span><span>사람</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-time.svg" onclick="CopyIconImg('uni-manage-time.svg')"/><div class="keyword"><span>manage</span><span>clock</span><span>time</span><span>시계</span><span>시간</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-set-approval.svg" onclick="CopyIconImg('uni-set-approval.svg')"/><div class="keyword"><span>manage</span><span>approval</span><span>결재</span><span>체크</span><span>결재</span></div></li>
-            <li><img src="./icon/uni-manage-doc2.svg" onclick="CopyIconImg('uni-manage-doc2.svg')"/><div class="keyword"><span>manage</span><span>doc</span><span>문서</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-doc.svg" onclick="CopyIconImg('uni-manage-doc.svg')"/><div class="keyword"><span>manage</span><span>doc</span><span>문서</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-order.svg" onclick="CopyIconImg('uni-manage-order.svg')"/><div class="keyword"><span>manage</span><span>box</span><span>박스</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-hand.svg" onclick="CopyIconImg('uni-manage-hand.svg')"/><div class="keyword"><span>manage</span><span>hand</span><span>손</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-manage-write.svg" onclick="CopyIconImg('uni-manage-write.svg')"/><div class="keyword"><span>manage</span><span>write</span><span>작성</span><span>등록</span><span>관리</span></div></li>
-            <li><img src="./icon/uni-certificate.svg" onclick="CopyIconImg('uni-certificate.svg')"/><div class="keyword"><span>certificate</span><span>doc</span><span>문서</span><span>인증서</span><span>증명서</span></div></li>
-            <li><img src="./icon/uni-certificate2.svg" onclick="CopyIconImg('uni-certificate2.svg')"/><div class="keyword"><span>certificate</span><span>doc</span><span>문서</span><span>인증서</span><span>증명서</span></div></li>
-            <li><img src="./icon/uni-search.svg" onclick="CopyIconImg('uni-search.svg')"/><div class="keyword"><span>search</span><span>magnifier</span><span>검색</span><span>미리보기</span><span>돋보기</span></div></li>
-            <li><img src="./icon/uni-file.svg" onclick="CopyIconImg('uni-file.svg')"/><div class="keyword"><span>file</span><span>파일</span><span>첨부</span><span>클립</span></div></li>
-            <li><img src="./icon/uni-home.svg" onclick="CopyIconImg('uni-home.svg')"/><div class="keyword"><span>home</span><span>홈</span></div></li>
-            <li><img src="./icon/uni-home3.svg" onclick="CopyIconImg('uni-home3.svg')"/><div class="keyword"><span>home</span><span>홈</span></div></li>
-            <li><img src="./icon/uni-home6.svg" onclick="CopyIconImg('uni-home6.svg')"/><div class="keyword"><span>home</span><span>홈</span></div></li>
-            <li><img src="./icon/uni-calendar.svg" onclick="CopyIconImg('uni-calendar.svg')"/><div class="keyword"><span>calendar</span><span>캘린더</span><span>달력</span></div></li>
-            <li><img src="./icon/uni-calendar-check.svg" onclick="CopyIconImg('uni-calendar-check.svg')"/><div class="keyword"><span>calendar</span><span>check</span><span>캘린더</span><span>달력</span><span>일정</span><span>체크</span></div></li>
-            <li><img src="./icon/uni-wallet.svg" onclick="CopyIconImg('uni-wallet.svg')"/><div class="keyword"><span>wallet</span><span>지갑</span></div></li>
-            <li><img src="./icon/uni-coin2.svg" onclick="CopyIconImg('uni-coin2.svg')"/><div class="keyword"><span>coin</span><span>돈</span><span>동전</span></div></li>
-            <li><img src="./icon/uni-coin1.svg" onclick="CopyIconImg('uni-coin1.svg')"/><div class="keyword"><span>coin</span><span>돈</span><span>동전</span></div></li>
-            <li><img src="./icon/uni-money.svg" onclick="CopyIconImg('uni-money.svg')"/><div class="keyword"><span>money</span><span>돈</span><span>동전</span></div></li>
-            <li><img src="./icon/uni-card1.svg" onclick="CopyIconImg('uni-card1.svg')"/><div class="keyword"><span>card</span><span>카드</span></div></li>
-            <li><img src="./icon/uni-card2.svg" onclick="CopyIconImg('uni-card2.svg')"/><div class="keyword"><span>card</span><span>카드</span></div></li>
-            <li><img src="./icon/uni-cards.svg" onclick="CopyIconImg('uni-cards.svg')"/><div class="keyword"><span>card</span><span>카드</span></div></li>
-            <li><img src="./icon/uni-card-company.svg" onclick="CopyIconImg('uni-card-company.svg')"/><div class="keyword"><span>card</span><span>company</span><span>카드</span><span>법인카드</span></div></li>
-            <li><img src="./icon/uni-card-user.svg" onclick="CopyIconImg('uni-card-user.svg')"/><div class="keyword"><span>card</span><span>user</span><span>카드</span><span>개인카드</span></div></li>
-            <li><img src="./icon/uni-folder-doc.svg" onclick="CopyIconImg('uni-folder-doc.svg')"/><div class="keyword"><span>doc</span><span>folder</span><span>문서</span><span>폴더</span></div></li>
-            <li><img src="./icon/uni-progress.svg" onclick="CopyIconImg('uni-progress.svg')"/><div class="keyword"><span>progress</span><span>doc</span><span>문서</span><span>프로세스</span><span>진행</span></div></li>
-            <li><img src="./icon/uni-user-doc.svg" onclick="CopyIconImg('uni-user-doc.svg')"/><div class="keyword"><span>doc</span><span>user</span><span>문서</span><span>사람</span></div></li>
-            <li><img src="./icon/uni-doc-receive.svg" onclick="CopyIconImg('uni-doc-receive.svg')"/><div class="keyword"><span>doc</span><span>user</span><span>receive</span><span>문서</span><span>전달</span><span>보내기</span><span>받기</span><span>전송</span></div></li>
-            <li><img src="./icon/uni-clock.svg" onclick="CopyIconImg('uni-clock.svg')"/><div class="keyword"><span>clock</span><span>시계</span></div></li>
-            <li><img src="./icon/uni-clock2.svg" onclick="CopyIconImg('uni-clock2.svg')"/><div class="keyword"><span>clock</span><span>시계</span></div></li>
-            <li><img src="./icon/uni-additional-time.svg" onclick="CopyIconImg('uni-additional-time.svg')"/><div class="keyword"><span>clock</span><span>시계</span><span>추가</span></div></li>
-            <li><img src="./icon/uni-pen.svg" onclick="CopyIconImg('uni-pen.svg')"/><div class="keyword"><span>pen</span><span>write</span><span>작성</span><span>수정</span></div></li>
-            <li><img src="./icon/uni-write.svg" onclick="CopyIconImg('uni-write.svg')"/><div class="keyword"><span>write</span><span>작성</span><span>등록</span></div></li>
-            <li><img src="./icon/uni-write-modify.svg" onclick="CopyIconImg('uni-write-modify.svg')"/><div class="keyword"><span>write</span><span>modify</span><span>수정</span><span>작성</span><span>추가</span><span>등록</span></div></li>
-            <li><img src="./icon/uni-download.svg" onclick="CopyIconImg('uni-download.svg')"/><div class="keyword"><span>download</span><span>다운로드</span></div></li>
-            <li><img src="./icon/uni-upload.svg" onclick="CopyIconImg('uni-upload.svg')"/><div class="keyword"><span>upload</span><span>업로드</span><span>등록</span></div></li>
-            <li><img src="./icon/uni-upload2.svg" onclick="CopyIconImg('uni-upload2.svg')"/><div class="keyword"><span>upload</span><span>업로드</span><span>등록</span></div></li>
-            <li><img src="./icon/uni-upload3.svg" onclick="CopyIconImg('uni-upload3.svg')"/><div class="keyword"><span>upload</span><span>업로드</span><span>등록</span></div></li>
-            <li><img src="./icon/uni-upload4.svg" onclick="CopyIconImg('uni-upload4.svg')"/><div class="keyword"><span>upload</span><span>업로드</span><span>등록</span></div></li>
-            <li><img src="./icon/uni-popup.svg" onclick="CopyIconImg('uni-popup.svg')"/><div class="keyword"><span>popup</span><span>새창</span><span>팝업</span></div></li>
-            <li><img src="./icon/uni-move.svg" onclick="CopyIconImg('uni-move.svg')"/><div class="keyword"><span>move</span><span>이동</span></div></li>
-            <li><img src="./icon/uni-pin.svg" onclick="CopyIconImg('uni-pin.svg')"/><div class="keyword"><span>location</span><span>pin</span><span>위치</span><span>안내</span></div></li>
-            <li><img src="./icon/uni-circle.svg" onclick="CopyIconImg('uni-circle.svg')"/><div class="keyword"><span>circle</span><span>원</span><span>동그라미</span></div></li>
-            <li><img src="./icon/uni-caution.svg" onclick="CopyIconImg('uni-caution.svg')"/><div class="keyword"><span>caution</span><span>주의</span><span>느낌표</span></div></li>
-            <li><img src="./icon/uni-help.svg" onclick="CopyIconImg('uni-help.svg')"/><div class="keyword"><span>help</span><span>question</span><span>물음표</span></div></li>
-            <li><img src="./icon/uni-info.svg" onclick="CopyIconImg('uni-info.svg')"/><div class="keyword"><span>information</span><span>도움말</span><span>정보</span></div></li>
-            <li><img src="./icon/uni-refresh.svg" onclick="CopyIconImg('uni-refresh.svg')"/><div class="keyword"><span>refresh</span><span>새로고침</span></div></li>
-            <li><img src="./icon/uni-turn.svg" onclick="CopyIconImg('uni-turn.svg')"/><div class="keyword"><span>turn</span><span>되돌리기</span><span>회전</span></div></li>
-            <li><img src="./icon/uni-rotate.svg" onclick="CopyIconImg('uni-rotate.svg')"/><div class="keyword"><span>rotate</span><span>회전</span></div></li>
-            <li><img src="./icon/uni-cloud.svg" onclick="CopyIconImg('uni-cloud.svg')"/><div class="keyword"><span>cloud</span><span>클라우드</span><span>구름</span></div></li>
-            <li><img src="./icon/uni-cloud-arrow.svg" onclick="CopyIconImg('uni-cloud-arrow.svg')"/><div class="keyword"><span>cloud</span><span>arrow</span><span>클라우드</span><span>통신</span></div></li>
-            <li><img src="./icon/uni-excel3.svg" onclick="CopyIconImg('uni-excel3.svg')"/><div class="keyword"><span>excel</span><span>엑셀</span></div></li>
-            <li><img src="./icon/uni-ref.svg" onclick="CopyIconImg('uni-ref.svg')"/><div class="keyword"><span>reference</span><span>참고</span><span>참조</span></div></li>
-            <li><img src="./icon/uni-box.svg" onclick="CopyIconImg('uni-box.svg')"/><div class="keyword"><span>box</span><span>박스</span></div></li>
-            <li><img src="./icon/uni-supply.svg" onclick="CopyIconImg('uni-supply.svg')"/><div class="keyword"><span>box</span><span>supply</span><span>박스</span><span>공급</span></div></li>
-            <li><img src="./icon/uni-purchase2.svg" onclick="CopyIconImg('uni-purchase2.svg')"/><div class="keyword"><span>box</span><span>purchase</span><span>박스</span><span>구매</span></div></li>
-            <li><img src="./icon/uni-purchase.svg" onclick="CopyIconImg('uni-purchase.svg')"/><div class="keyword"><span>hand</span><span>purchase</span><span>손</span><span>구매</span></div></li>
-            <li><img src="./icon/uni-sales.svg" onclick="CopyIconImg('uni-sales.svg')"/><div class="keyword"><span>hand</span><span>sales</span><span>손</span><span>판매</span><span>돈</span></div></li>
-            <li><img src="./icon/uni-caution02.svg" onclick="CopyIconImg('uni-caution02.svg')"/><div class="keyword"><span>caution</span><span>주의</span><span>느낌표</span></div></li>
-            <li><img src="./icon/uni-camera.svg" onclick="CopyIconImg('uni-camera.svg')"/><div class="keyword"><span>camera</span><span>카메라</span><span>사진</span><span>촬영</span></div></li>
-            <li><img src="./icon/uni-print.svg" onclick="CopyIconImg('uni-print.svg')"/><div class="keyword"><span>print</span><span>프린터</span><span>인쇄</span></div></li>
-            <li><img src="./icon/uni-mail.svg" onclick="CopyIconImg('uni-mail.svg')"/><div class="keyword"><span>mail</span><span>메일</span></div></li>
-            <li><img src="./icon/uni-mobile.svg" onclick="CopyIconImg('uni-mobile.svg')"/><div class="keyword"><span>mobile</span><span>모바일</span><span>핸드폰</span></div></li>
-            <li><img src="./icon/uni-telephone.svg" onclick="CopyIconImg('uni-telephone.svg')"/><div class="keyword"><span>telephone</span><span>전화</span><span>수화기</span></div></li>
-            <li><img src="./icon/uni-manage-alarm.svg" onclick="CopyIconImg('uni-manage-alarm.svg')"/><div class="keyword"><span>alarm</span><span>알림</span><span>알람</span><span>종</span></div></li>
-            <li><img src="./icon/uni-manage-client.svg" onclick="CopyIconImg('uni-manage-client.svg')"/><div class="keyword"><span>client</span><span>briefcase</span><span>suitcase</span><span>고객</span><span>서류가방</span><span>프로세스</span><span>진행</span></div></li>
-            <li><img src="./icon/uni-org-chart.svg" onclick="CopyIconImg('uni-org-chart.svg')"/><div class="keyword"><span>tree</span><span>folder</span><span>폴더</span><span>트리</span></div></li>
-            <li><img src="./icon/uni-storage.svg" onclick="CopyIconImg('uni-storage.svg')"/><div class="keyword"><span>storage</span><span>저장공간</span><span>프로세스</span><span>진행</span></div></li>
-            <li><img src="./icon/uni-speech-bubble.svg" onclick="CopyIconImg('uni-speech-bubble.svg')"/><div class="keyword"><span>speech-bubble</span><span>말풍선</span></div></li>
-            <li><img src="./icon/uni-diamond.svg" onclick="CopyIconImg('uni-diamond.svg')"/><div class="keyword"><span>diamond</span><span>마름모</span></div></li>
-            <li><img src="./icon/uni-trash.svg" onclick="CopyIconImg('uni-trash.svg')"/><div class="keyword"><span>trash</span><span>wastebasket</span><span>휴지통</span><span>삭제</span></div></li>
-            <li><img src="./icon/uni-trash-check.svg" onclick="CopyIconImg('uni-trash-check.svg')"/><div class="keyword"><span>trash</span><span>wastebasket</span><span>휴지통</span><span>삭제</span><span>체크</span></div></li>
-            <li><img src="./icon/uni-cart-check.svg" onclick="CopyIconImg('uni-cart-check.svg')"/><div class="keyword"><span>cart</span><span>check</span><span>구매</span><span>카트</span></div></li>
-            <li><img src="./icon/uni-more-f.svg" onclick="CopyIconImg('uni-more-f.svg')"/><div class="keyword"><span>more</span><span>더보기</span><span>추가메뉴</span></div></li>
-            <li><img src="./icon/uni-temp-col1.svg" onclick="CopyIconImg('uni-temp-col1.svg')"/><div class="keyword"><span>column</span><span>템플릿</span><span>양식</span><span>칸</span></div></li>
-            <li><img src="./icon/uni-temp-col2-h.svg" onclick="CopyIconImg('uni-temp-col2-h.svg')"/><div class="keyword"><span>column</span><span>템플릿</span><span>양식</span><span>칸</span></div></li>
-            <li><img src="./icon/uni-temp-col2-v.svg" onclick="CopyIconImg('uni-temp-col2-v.svg')"/><div class="keyword"><span>column</span><span>템플릿</span><span>양식</span><span>칸</span></div></li>
-            <li><img src="./icon/uni-temp-col4.svg" onclick="CopyIconImg('uni-temp-col4.svg')"/><div class="keyword"><span>column</span><span>템플릿</span><span>양식</span><span>칸</span></div></li>
-            <li><img src="./icon/uni-menu.svg" onclick="CopyIconImg('uni-menu.svg')"/><div class="keyword"><span>menu</span><span>메뉴</span></div></li>
-            <li><img src="./icon/uni-list2.svg" onclick="CopyIconImg('uni-list2.svg')"/><div class="keyword"><span>list</span><span>목록</span></div></li>
-            <li><img src="./icon/uni-protect.svg" onclick="CopyIconImg('uni-protect.svg')"/><div class="keyword"><span>protect</span><span>정보보호</span><span>보안</span></div></li>
-            <li><img src="./icon/uni-find-pw.svg" onclick="CopyIconImg('uni-find-pw.svg')"/><div class="keyword"><span>find</span><span>password</span><span>비밀번호찾기</span></div></li>
-            <li><img src="./icon/uni-lock.svg" onclick="CopyIconImg('uni-lock.svg')"/><div class="keyword"><span>lock</span><span>자물쇠</span><span>잠김</span><span>보안</span></div></li>
-            <li><img src="./icon/uni-unlock.svg" onclick="CopyIconImg('uni-unlock.svg')"/><div class="keyword"><span>unlock</span><span>자물쇠</span><span>열림</span><span>보안</span></div></li>
-            <li><img src="./icon/uni-timer1.svg" onclick="CopyIconImg('uni-timer1.svg')"/><div class="keyword"><span>timer</span><span>stopwatch</span><span>타이머</span><span>스톱워치</span></div></li>
-            <li><img src="./icon/uni-timer2.svg" onclick="CopyIconImg('uni-timer2.svg')"/><div class="keyword"><span>timer</span><span>stopwatch</span><span>타이머</span><span>스톱워치</span></div></li>
-            <li><img src="./icon/uni-upsize.svg" onclick="CopyIconImg('uni-upsize.svg')"/><div class="keyword"><span>upsize</span><span>확장</span></div></li>
-            <li><img src="./icon/uni-downsize.svg" onclick="CopyIconImg('uni-downsize.svg')"/><div class="keyword"><span>downsize</span><span>축소</span></div></li>
-            <li><img src="./icon/uni-img.svg" onclick="CopyIconImg('uni-img.svg')"/><div class="keyword"><span>img</span><span>이미지</span></div></li>
-            <li><img src="./icon/uni-img-empty.svg" onclick="CopyIconImg('uni-img-empty.svg')"/><div class="keyword"><span>img</span><span>empty</span><span>이미지</span><span>없음</span></div></li>
-            <li><img src="./icon/uni-eye1-open.svg" onclick="CopyIconImg('uni-eye1-open.svg')"/><div class="keyword"><span>eye</span><span>open</span><span>활성</span></div></li>
-            <li><img src="./icon/uni-eye1-close.svg" onclick="CopyIconImg('uni-eye1-close.svg')"/><div class="keyword"><span>eye</span><span>close</span><span>비활성</span></div></li>
-            <li><img src="./icon/uni-eye2-open.svg" onclick="CopyIconImg('uni-eye2-open.svg')"/><div class="keyword"><span>eye</span><span>open</span><span>활성</span></div></li>
-            <li><img src="./icon/uni-eye2-close.svg" onclick="CopyIconImg('uni-eye2-close.svg')"/><div class="keyword"><span>eye</span><span>close</span><span>비활성</span></div></li>
+            <li><img src="./icon/uni-main-pes.svg" class="copy-img-btn"/><div class="keyword"><span>pes</span><span>경비처리</span></div></li>
+            <li><img src="./icon/uni-main-lc.svg" class="copy-img-btn"/><div class="keyword"><span>lc</span><span>근로계약</span></div></li>
+            <li><img src="./icon/uni-main-econ.svg" class="copy-img-btn"/><div class="keyword"><span>econ</span><span>전자계약</span></div></li>
+            <li><img src="./icon/uni-main-approval.svg" class="copy-img-btn"/><div class="keyword"><span>approval</span><span>전자결재</span></div></li>
+            <li><img src="./icon/uni-main-community.svg" class="copy-img-btn"/><div class="keyword"><span>community</span><span>커뮤니티</span></div></li>
+            <li><img src="./icon/uni-main-tax.svg" class="copy-img-btn"/><div class="keyword"><span>tax</span><span>세금계산서</span></div></li>
+            <li><img src="./icon/uni-main-wps.svg" class="copy-img-btn"/><div class="keyword"><span>community</span><span>커뮤니티</span></div></li>
+            <li><img src="./icon/uni-main-avs.svg" class="copy-img-btn"/><div class="keyword"><span>avs</span><span>인사관리</span></div></li>
+            <li><img src="./icon/uni-thumb-user.svg" class="copy-img-btn"/><div class="keyword"><span>thumbnail</span><span>user</span><span>썸네일</span><span>사람</span></div></li>
+            <li><img src="./icon/uni-thumb-user02.svg" class="copy-img-btn"/><div class="keyword"><span>thumbnail</span><span>user</span><span>썸네일</span><span>사람</span></div></li>
+            <li><img src="./icon/uni-thumb-user03.svg" class="copy-img-btn"/><div class="keyword"><span>thumbnail</span><span>user</span><span>썸네일</span><span>사람</span></div></li>
+            <li><img src="./icon/uni-thumb-user04.svg" class="copy-img-btn"/><div class="keyword"><span>thumbnail</span><span>user</span><span>썸네일</span><span>사람</span></div></li>
+            <li><img src="./icon/uni-company2.svg" class="copy-img-btn"/><div class="keyword"><span>building</span><span>company</span><span>건물</span><span>회사</span></div></li>
+            <li><img src="./icon/uni-user02.svg" class="copy-img-btn"/><div class="keyword"><span>user</span><span>person</span><span>human</span><span>사람</span><span>한명</span></div></li>
+            <li><img src="./icon/uni-user-business.svg" class="copy-img-btn"/><div class="keyword"><span>user</span><span>necktie</span><span>business</span><span>사람</span><span>회사원</span></div></li>
+            <li><img src="./icon/uni-user-smile.svg" class="copy-img-btn"/><div class="keyword"><span>user</span><span>smile</span><span>사람</span><span>한명</span></div></li>
+            <li><img src="./icon/uni-doc-empty.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>empty</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-doc.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-docs.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-doc-coin.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>coin</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-download-doc.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>download</span><span>다운로드</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-no-doc1.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>caution</span><span>error</span><span>주의</span><span>오류</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-no-doc2.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>caution</span><span>error</span><span>주의</span><span>오류</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-preview.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>search</span><span>preview</span><span>미리보기</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-preview2.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>search</span><span>preview</span><span>미리보기</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-doc-check.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>check</span><span>문서</span><span>체크</span></div></li>
+            <li><img src="./icon/uni-doc-plus.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>plus</span><span>문서</span><span>추가</span></div></li>
+            <li><img src="./icon/uni-fin.svg" class="copy-img-btn"/><div class="keyword"><span>fin</span><span>doc</span><span>check</span><span>문서</span><span>완료</span></div></li>
+            <li><img src="./icon/uni-view-receipt.svg" class="copy-img-btn"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-receipt.svg" class="copy-img-btn"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-calc-receipt.svg" class="copy-img-btn"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-check-receipt.svg" class="copy-img-btn"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-calc-check.svg" class="copy-img-btn"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-money-in-out.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>coin</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-money-in.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>coin</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-no-receipt2.svg" class="copy-img-btn"/><div class="keyword"><span>no</span><span>blank</span><span>receipt</span><span>doc</span><span>없음</span><span>오류</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-no-receipt3.svg" class="copy-img-btn"/><div class="keyword"><span>no</span><span>blank</span><span>receipt</span><span>doc</span><span>없음</span><span>오류</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-money-out.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>coin</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-doc-tax-money.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>tax</span><span>문서</span><span>세금계산서</span></div></li>
+            <li><img src="./icon/uni-doc-noti.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>noti</span><span>문서</span><span>알림</span></div></li>
+            <li><img src="./icon/uni-doc-qna.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>qna</span><span>문서</span><span>질문답변</span></div></li>
+            <li><img src="./icon/uni-doc-talk.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>talk</span><span>speech-bubble</span><span>문서</span><span>말풍선</span></div></li>
+            <li><img src="./icon/uni-doc-user-smile.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>user</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-service-link1.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>tax</span><span>세금계산서</span></div></li>
+            <li><img src="./icon/uni-service-link2.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>tax</span><span>세금계산서</span></div></li>
+            <li><img src="./icon/uni-service-link3.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>receipt</span><span>문서</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-service-link4.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>contract</span><span>문서</span><span>계약서</span></div></li>
+            <li><img src="./icon/uni-signature.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>signature</span><span>서명</span><span>싸인</span></div></li>
+            <li><img src="./icon/uni-receipt2.svg" class="copy-img-btn"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-no-receipt4.svg" class="copy-img-btn"/><div class="keyword"><span>no</span><span>blank</span><span>receipt</span><span>doc</span><span>없음</span><span>오류</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-content-empty.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>empty</span><span>빈페이지</span><span>없음</span></div></li>
+            <li><img src="./icon/uni-doc-storage-check.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>storage</span><span>check</span><span>문서</span><span>문서함</span></div></li>
+            <li><img src="./icon/uni-doc-storage-plus.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>storage</span><span>plus</span><span>문서</span><span>문서함</span></div></li>
+            <li><img src="./icon/uni-doc-storage-upload.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>storage</span><span>upload</span><span>문서</span><span>문서함</span></div></li>
+            <li><img src="./icon/uni-graph.svg" class="copy-img-btn"/><div class="keyword"><span>graph</span><span>그래프</span></div></li>
+            <li><img src="./icon/uni-graph-up.svg" class="copy-img-btn"/><div class="keyword"><span>graph</span><span>그래프</span></div></li>
+            <li><img src="./icon/uni-main-unidocu.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>monitor</span><span>모니터</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-main-unidocu-off.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>monitor</span><span>모니터</span><span>문서</span></div></li>
+            <li><img src="./icon/uni-report-user.svg" class="copy-img-btn"/><div class="keyword"><span>monitor</span><span>모니터</span><span>사람</span></div></li>
+            <li><img src="./icon/uni-report.svg" class="copy-img-btn"/><div class="keyword"><span>monitor</span><span>모니터</span><span>그래프</span></div></li>
+            <li><img src="./icon/uni-monitor.svg" class="copy-img-btn"/><div class="keyword"><span>monitor</span><span>모니터</span></div></li>
+            <li><img src="./icon/uni-monitor2.svg" class="copy-img-btn"/><div class="keyword"><span>monitor</span><span>모니터</span><span>작성</span></div></li>
+            <li><img src="./icon/uni-set.svg" class="copy-img-btn"/><div class="keyword"><span>set</span><span>관리</span><span>설정</span></div></li>
+            <li><img src="./icon/uni-manage.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-monitor.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>monitor</span><span>모니터</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-site.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>monitor</span><span>모니터</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-org-chart.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>folder</span><span>폴더</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-org-chart2.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>folder</span><span>폴더</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-user2.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>user</span><span>사람</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-time.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>clock</span><span>time</span><span>시계</span><span>시간</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-set-approval.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>approval</span><span>결재</span><span>체크</span><span>결재</span></div></li>
+            <li><img src="./icon/uni-manage-doc2.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>doc</span><span>문서</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-doc.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>doc</span><span>문서</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-order.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>box</span><span>박스</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-hand.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>hand</span><span>손</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-manage-write.svg" class="copy-img-btn"/><div class="keyword"><span>manage</span><span>write</span><span>작성</span><span>등록</span><span>관리</span></div></li>
+            <li><img src="./icon/uni-certificate.svg" class="copy-img-btn"/><div class="keyword"><span>certificate</span><span>doc</span><span>문서</span><span>인증서</span><span>증명서</span></div></li>
+            <li><img src="./icon/uni-certificate2.svg" class="copy-img-btn"/><div class="keyword"><span>certificate</span><span>doc</span><span>문서</span><span>인증서</span><span>증명서</span></div></li>
+            <li><img src="./icon/uni-search.svg" class="copy-img-btn"/><div class="keyword"><span>search</span><span>magnifier</span><span>검색</span><span>미리보기</span><span>돋보기</span></div></li>
+            <li><img src="./icon/uni-file.svg" class="copy-img-btn"/><div class="keyword"><span>file</span><span>파일</span><span>첨부</span><span>클립</span></div></li>
+            <li><img src="./icon/uni-home.svg" class="copy-img-btn"/><div class="keyword"><span>home</span><span>홈</span></div></li>
+            <li><img src="./icon/uni-home3.svg" class="copy-img-btn"/><div class="keyword"><span>home</span><span>홈</span></div></li>
+            <li><img src="./icon/uni-home6.svg" class="copy-img-btn"/><div class="keyword"><span>home</span><span>홈</span></div></li>
+            <li><img src="./icon/uni-calendar.svg" class="copy-img-btn"/><div class="keyword"><span>calendar</span><span>캘린더</span><span>달력</span></div></li>
+            <li><img src="./icon/uni-calendar-check.svg" class="copy-img-btn"/><div class="keyword"><span>calendar</span><span>check</span><span>캘린더</span><span>달력</span><span>일정</span><span>체크</span></div></li>
+            <li><img src="./icon/uni-wallet.svg" class="copy-img-btn"/><div class="keyword"><span>wallet</span><span>지갑</span></div></li>
+            <li><img src="./icon/uni-coin2.svg" class="copy-img-btn"/><div class="keyword"><span>coin</span><span>돈</span><span>동전</span></div></li>
+            <li><img src="./icon/uni-coin1.svg" class="copy-img-btn"/><div class="keyword"><span>coin</span><span>돈</span><span>동전</span></div></li>
+            <li><img src="./icon/uni-money.svg" class="copy-img-btn"/><div class="keyword"><span>money</span><span>돈</span><span>동전</span></div></li>
+            <li><img src="./icon/uni-card1.svg" class="copy-img-btn"/><div class="keyword"><span>card</span><span>카드</span></div></li>
+            <li><img src="./icon/uni-card2.svg" class="copy-img-btn"/><div class="keyword"><span>card</span><span>카드</span></div></li>
+            <li><img src="./icon/uni-cards.svg" class="copy-img-btn"/><div class="keyword"><span>card</span><span>카드</span></div></li>
+            <li><img src="./icon/uni-card-company.svg" class="copy-img-btn"/><div class="keyword"><span>card</span><span>company</span><span>카드</span><span>법인카드</span></div></li>
+            <li><img src="./icon/uni-card-user.svg" class="copy-img-btn"/><div class="keyword"><span>card</span><span>user</span><span>카드</span><span>개인카드</span></div></li>
+            <li><img src="./icon/uni-folder-doc.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>folder</span><span>문서</span><span>폴더</span></div></li>
+            <li><img src="./icon/uni-progress.svg" class="copy-img-btn"/><div class="keyword"><span>progress</span><span>doc</span><span>문서</span><span>프로세스</span><span>진행</span></div></li>
+            <li><img src="./icon/uni-user-doc.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>user</span><span>문서</span><span>사람</span></div></li>
+            <li><img src="./icon/uni-doc-receive.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>user</span><span>receive</span><span>문서</span><span>전달</span><span>보내기</span><span>받기</span><span>전송</span></div></li>
+            <li><img src="./icon/uni-clock.svg" class="copy-img-btn"/><div class="keyword"><span>clock</span><span>시계</span></div></li>
+            <li><img src="./icon/uni-clock2.svg" class="copy-img-btn"/><div class="keyword"><span>clock</span><span>시계</span></div></li>
+            <li><img src="./icon/uni-additional-time.svg" class="copy-img-btn"/><div class="keyword"><span>clock</span><span>시계</span><span>추가</span></div></li>
+            <li><img src="./icon/uni-pen.svg" class="copy-img-btn"/><div class="keyword"><span>pen</span><span>write</span><span>작성</span><span>수정</span></div></li>
+            <li><img src="./icon/uni-write.svg" class="copy-img-btn"/><div class="keyword"><span>write</span><span>작성</span><span>등록</span></div></li>
+            <li><img src="./icon/uni-write-modify.svg" class="copy-img-btn"/><div class="keyword"><span>write</span><span>modify</span><span>수정</span><span>작성</span><span>추가</span><span>등록</span></div></li>
+            <li><img src="./icon/uni-download.svg" class="copy-img-btn"/><div class="keyword"><span>download</span><span>다운로드</span></div></li>
+            <li><img src="./icon/uni-upload.svg" class="copy-img-btn"/><div class="keyword"><span>upload</span><span>업로드</span><span>등록</span></div></li>
+            <li><img src="./icon/uni-upload2.svg" class="copy-img-btn"/><div class="keyword"><span>upload</span><span>업로드</span><span>등록</span></div></li>
+            <li><img src="./icon/uni-upload3.svg" class="copy-img-btn"/><div class="keyword"><span>upload</span><span>업로드</span><span>등록</span></div></li>
+            <li><img src="./icon/uni-upload4.svg" class="copy-img-btn"/><div class="keyword"><span>upload</span><span>업로드</span><span>등록</span></div></li>
+            <li><img src="./icon/uni-popup.svg" class="copy-img-btn"/><div class="keyword"><span>popup</span><span>새창</span><span>팝업</span></div></li>
+            <li><img src="./icon/uni-move.svg" class="copy-img-btn"/><div class="keyword"><span>move</span><span>이동</span></div></li>
+            <li><img src="./icon/uni-pin.svg" class="copy-img-btn"/><div class="keyword"><span>location</span><span>pin</span><span>위치</span><span>안내</span></div></li>
+            <li><img src="./icon/uni-circle.svg" class="copy-img-btn"/><div class="keyword"><span>circle</span><span>원</span><span>동그라미</span></div></li>
+            <li><img src="./icon/uni-caution.svg" class="copy-img-btn"/><div class="keyword"><span>caution</span><span>주의</span><span>느낌표</span></div></li>
+            <li><img src="./icon/uni-help.svg" class="copy-img-btn"/><div class="keyword"><span>help</span><span>question</span><span>물음표</span></div></li>
+            <li><img src="./icon/uni-info.svg" class="copy-img-btn"/><div class="keyword"><span>information</span><span>도움말</span><span>정보</span></div></li>
+            <li><img src="./icon/uni-refresh.svg" class="copy-img-btn"/><div class="keyword"><span>refresh</span><span>새로고침</span></div></li>
+            <li><img src="./icon/uni-turn.svg" class="copy-img-btn"/><div class="keyword"><span>turn</span><span>되돌리기</span><span>회전</span></div></li>
+            <li><img src="./icon/uni-rotate.svg" class="copy-img-btn"/><div class="keyword"><span>rotate</span><span>회전</span></div></li>
+            <li><img src="./icon/uni-cloud.svg" class="copy-img-btn"/><div class="keyword"><span>cloud</span><span>클라우드</span><span>구름</span></div></li>
+            <li><img src="./icon/uni-cloud-arrow.svg" class="copy-img-btn"/><div class="keyword"><span>cloud</span><span>arrow</span><span>클라우드</span><span>통신</span></div></li>
+            <li><img src="./icon/uni-excel3.svg" class="copy-img-btn"/><div class="keyword"><span>excel</span><span>엑셀</span></div></li>
+            <li><img src="./icon/uni-ref.svg" class="copy-img-btn"/><div class="keyword"><span>reference</span><span>참고</span><span>참조</span></div></li>
+            <li><img src="./icon/uni-box.svg" class="copy-img-btn"/><div class="keyword"><span>box</span><span>박스</span></div></li>
+            <li><img src="./icon/uni-supply.svg" class="copy-img-btn"/><div class="keyword"><span>box</span><span>supply</span><span>박스</span><span>공급</span></div></li>
+            <li><img src="./icon/uni-purchase2.svg" class="copy-img-btn"/><div class="keyword"><span>box</span><span>purchase</span><span>박스</span><span>구매</span></div></li>
+            <li><img src="./icon/uni-purchase.svg" class="copy-img-btn"/><div class="keyword"><span>hand</span><span>purchase</span><span>손</span><span>구매</span></div></li>
+            <li><img src="./icon/uni-sales.svg" class="copy-img-btn"/><div class="keyword"><span>hand</span><span>sales</span><span>손</span><span>판매</span><span>돈</span></div></li>
+            <li><img src="./icon/uni-caution02.svg" class="copy-img-btn"/><div class="keyword"><span>caution</span><span>주의</span><span>느낌표</span></div></li>
+            <li><img src="./icon/uni-camera.svg" class="copy-img-btn"/><div class="keyword"><span>camera</span><span>카메라</span><span>사진</span><span>촬영</span></div></li>
+            <li><img src="./icon/uni-print.svg" class="copy-img-btn"/><div class="keyword"><span>print</span><span>프린터</span><span>인쇄</span></div></li>
+            <li><img src="./icon/uni-mail.svg" class="copy-img-btn"/><div class="keyword"><span>mail</span><span>메일</span></div></li>
+            <li><img src="./icon/uni-mobile.svg" class="copy-img-btn"/><div class="keyword"><span>mobile</span><span>모바일</span><span>핸드폰</span></div></li>
+            <li><img src="./icon/uni-telephone.svg" class="copy-img-btn"/><div class="keyword"><span>telephone</span><span>전화</span><span>수화기</span></div></li>
+            <li><img src="./icon/uni-manage-alarm.svg" class="copy-img-btn"/><div class="keyword"><span>alarm</span><span>알림</span><span>알람</span><span>종</span></div></li>
+            <li><img src="./icon/uni-manage-client.svg" class="copy-img-btn"/><div class="keyword"><span>client</span><span>briefcase</span><span>suitcase</span><span>고객</span><span>서류가방</span><span>프로세스</span><span>진행</span></div></li>
+            <li><img src="./icon/uni-org-chart.svg" class="copy-img-btn"/><div class="keyword"><span>tree</span><span>folder</span><span>폴더</span><span>트리</span></div></li>
+            <li><img src="./icon/uni-storage.svg" class="copy-img-btn"/><div class="keyword"><span>storage</span><span>저장공간</span><span>프로세스</span><span>진행</span></div></li>
+            <li><img src="./icon/uni-speech-bubble.svg" class="copy-img-btn"/><div class="keyword"><span>speech-bubble</span><span>말풍선</span></div></li>
+            <li><img src="./icon/uni-diamond.svg" class="copy-img-btn"/><div class="keyword"><span>diamond</span><span>마름모</span></div></li>
+            <li><img src="./icon/uni-trash.svg" class="copy-img-btn"/><div class="keyword"><span>trash</span><span>wastebasket</span><span>휴지통</span><span>삭제</span></div></li>
+            <li><img src="./icon/uni-trash-check.svg" class="copy-img-btn"/><div class="keyword"><span>trash</span><span>wastebasket</span><span>휴지통</span><span>삭제</span><span>체크</span></div></li>
+            <li><img src="./icon/uni-cart-check.svg" class="copy-img-btn"/><div class="keyword"><span>cart</span><span>check</span><span>구매</span><span>카트</span></div></li>
+            <li><img src="./icon/uni-more-f.svg" class="copy-img-btn"/><div class="keyword"><span>more</span><span>더보기</span><span>추가메뉴</span></div></li>
+            <li><img src="./icon/uni-temp-col1.svg" class="copy-img-btn"/><div class="keyword"><span>column</span><span>템플릿</span><span>양식</span><span>칸</span></div></li>
+            <li><img src="./icon/uni-temp-col2-h.svg" class="copy-img-btn"/><div class="keyword"><span>column</span><span>템플릿</span><span>양식</span><span>칸</span></div></li>
+            <li><img src="./icon/uni-temp-col2-v.svg" class="copy-img-btn"/><div class="keyword"><span>column</span><span>템플릿</span><span>양식</span><span>칸</span></div></li>
+            <li><img src="./icon/uni-temp-col4.svg" class="copy-img-btn"/><div class="keyword"><span>column</span><span>템플릿</span><span>양식</span><span>칸</span></div></li>
+            <li><img src="./icon/uni-menu.svg" class="copy-img-btn"/><div class="keyword"><span>menu</span><span>메뉴</span></div></li>
+            <li><img src="./icon/uni-list2.svg" class="copy-img-btn"/><div class="keyword"><span>list</span><span>목록</span></div></li>
+            <li><img src="./icon/uni-protect.svg" class="copy-img-btn"/><div class="keyword"><span>protect</span><span>정보보호</span><span>보안</span></div></li>
+            <li><img src="./icon/uni-find-pw.svg" class="copy-img-btn"/><div class="keyword"><span>find</span><span>password</span><span>비밀번호찾기</span></div></li>
+            <li><img src="./icon/uni-lock.svg" class="copy-img-btn"/><div class="keyword"><span>lock</span><span>자물쇠</span><span>잠김</span><span>보안</span></div></li>
+            <li><img src="./icon/uni-unlock.svg" class="copy-img-btn"/><div class="keyword"><span>unlock</span><span>자물쇠</span><span>열림</span><span>보안</span></div></li>
+            <li><img src="./icon/uni-timer1.svg" class="copy-img-btn"/><div class="keyword"><span>timer</span><span>stopwatch</span><span>타이머</span><span>스톱워치</span></div></li>
+            <li><img src="./icon/uni-timer2.svg" class="copy-img-btn"/><div class="keyword"><span>timer</span><span>stopwatch</span><span>타이머</span><span>스톱워치</span></div></li>
+            <li><img src="./icon/uni-upsize.svg" class="copy-img-btn"/><div class="keyword"><span>upsize</span><span>확장</span></div></li>
+            <li><img src="./icon/uni-downsize.svg" class="copy-img-btn"/><div class="keyword"><span>downsize</span><span>축소</span></div></li>
+            <li><img src="./icon/uni-img.svg" class="copy-img-btn"/><div class="keyword"><span>img</span><span>이미지</span></div></li>
+            <li><img src="./icon/uni-img-empty.svg" class="copy-img-btn"/><div class="keyword"><span>img</span><span>empty</span><span>이미지</span><span>없음</span></div></li>
+            <li><img src="./icon/uni-eye1-open.svg" class="copy-img-btn"/><div class="keyword"><span>eye</span><span>open</span><span>활성</span></div></li>
+            <li><img src="./icon/uni-eye1-close.svg" class="copy-img-btn"/><div class="keyword"><span>eye</span><span>close</span><span>비활성</span></div></li>
+            <li><img src="./icon/uni-eye2-open.svg" class="copy-img-btn"/><div class="keyword"><span>eye</span><span>open</span><span>활성</span></div></li>
+            <li><img src="./icon/uni-eye2-close.svg" class="copy-img-btn"/><div class="keyword"><span>eye</span><span>close</span><span>비활성</span></div></li>
             
           </ul>
           <ul class="size-s">
-            <li><img src="./icon/uni-close.svg" onclick="CopyIconImg('uni-close.svg')"/><div class="keyword"><span>close</span><span>cancle</span><span>del</span><span>multiply</span><span>닫기</span><span>삭제</span><span>취소</span><span>곱하기</span></div></li>
-            <li><img src="./icon/uni-plus.svg" onclick="CopyIconImg('uni-plus.svg')"/><div class="keyword"><span>plus</span><span>add</span><span>플러스</span><span>추가</span><span>더하기</span></div></li>
-            <li><img src="./icon/uni-minus.svg" onclick="CopyIconImg('uni-minus.svg')"/><div class="keyword"><span>minus</span><span>subtract</span><span>마이너스</span><span>삭제</span><span>빼기</span></div></li>
-            <li><img src="./icon/uni-check.svg" onclick="CopyIconImg('uni-check.svg')"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
-            <li><img src="./icon/uni-arrow-left.svg" onclick="CopyIconImg('uni-arrow-left.svg')"/><div class="keyword"><span>arrow</span><span>left</span><span>화살표</span><span>이전</span><span>왼쪽</span></div></li>
-            <li><img src="./icon/uni-arrow-right.svg" onclick="CopyIconImg('uni-arrow-right.svg')"/><div class="keyword"><span>arrow</span><span>right</span><span>화살표</span><span>다음</span><span>오른쪽</span></div></li>
-            <li><img src="./icon/uni-arrow-down.svg" onclick="CopyIconImg('uni-arrow-down.svg')"/><div class="keyword"><span>arrow</span><span>down</span><span>화살표</span><span>아래</span></div></li>
-            <li><img src="./icon/uni-arrow-up.svg" onclick="CopyIconImg('uni-arrow-up.svg')"/><div class="keyword"><span>arrow</span><span>up</span><span>화살표</span><span>위</span></div></li>
-            <li><img src="./icon/uni-arrow-line-left.svg" onclick="CopyIconImg('uni-arrow-line-left.svg')"/><div class="keyword"><span>arrow</span><span>left</span><span>화살표</span><span>이전</span><span>왼쪽</span></div></li>
-            <li><img src="./icon/uni-arrow-line-right.svg" onclick="CopyIconImg('uni-arrow-line-right.svg')"/><div class="keyword"><span>arrow</span><span>right</span><span>화살표</span><span>다음</span><span>오른쪽</span></div></li>
-            <li><img src="./icon/uni-arrow-line-down.svg" onclick="CopyIconImg('uni-arrow-line-down.svg')"/><div class="keyword"><span>arrow</span><span>down</span><span>화살표</span><span>아래</span></div></li>
-            <li><img src="./icon/uni-arrow-line-up.svg" onclick="CopyIconImg('uni-arrow-line-up.svg')"/><div class="keyword"><span>arrow</span><span>up</span><span>화살표</span><span>위</span></div></li>
-            <li><img src="./icon/uni-arrow-first.svg" onclick="CopyIconImg('uni-arrow-first.svg')"/><div class="keyword"><span>arrow</span><span>first</span><span>화살표</span><span>처음</span></div></li>
-            <li><img src="./icon/uni-arrow-last.svg" onclick="CopyIconImg('uni-arrow-last.svg')"/><div class="keyword"><span>arrow</span><span>last</span><span>화살표</span><span>마지막</span></div></li>
+            <li><img src="./icon/uni-close.svg" class="copy-img-btn"/><div class="keyword"><span>close</span><span>cancle</span><span>del</span><span>multiply</span><span>닫기</span><span>삭제</span><span>취소</span><span>곱하기</span></div></li>
+            <li><img src="./icon/uni-plus.svg" class="copy-img-btn"/><div class="keyword"><span>plus</span><span>add</span><span>플러스</span><span>추가</span><span>더하기</span></div></li>
+            <li><img src="./icon/uni-minus.svg" class="copy-img-btn"/><div class="keyword"><span>minus</span><span>subtract</span><span>마이너스</span><span>삭제</span><span>빼기</span></div></li>
+            <li><img src="./icon/uni-check.svg" class="copy-img-btn"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
+            <li><img src="./icon/uni-arrow-left.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>left</span><span>화살표</span><span>이전</span><span>왼쪽</span></div></li>
+            <li><img src="./icon/uni-arrow-right.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>right</span><span>화살표</span><span>다음</span><span>오른쪽</span></div></li>
+            <li><img src="./icon/uni-arrow-down.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>down</span><span>화살표</span><span>아래</span></div></li>
+            <li><img src="./icon/uni-arrow-up.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>up</span><span>화살표</span><span>위</span></div></li>
+            <li><img src="./icon/uni-arrow-line-left.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>left</span><span>화살표</span><span>이전</span><span>왼쪽</span></div></li>
+            <li><img src="./icon/uni-arrow-line-right.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>right</span><span>화살표</span><span>다음</span><span>오른쪽</span></div></li>
+            <li><img src="./icon/uni-arrow-line-down.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>down</span><span>화살표</span><span>아래</span></div></li>
+            <li><img src="./icon/uni-arrow-line-up.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>up</span><span>화살표</span><span>위</span></div></li>
+            <li><img src="./icon/uni-arrow-first.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>first</span><span>화살표</span><span>처음</span></div></li>
+            <li><img src="./icon/uni-arrow-last.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>last</span><span>화살표</span><span>마지막</span></div></li>
           </ul>
           <ul>
-            <li><img src="./icon/uni-cancle.svg" onclick="CopyIconImg('uni-cancle.svg')"/><div class="keyword"><span>close</span><span>cancle</span><span>del</span><span>multiply</span><span>닫기</span><span>삭제</span><span>취소</span><span>곱하기</span></div></li>
-            <li><img src="./icon/uni-add.svg" onclick="CopyIconImg('uni-add.svg')"/><div class="keyword"><span>plus</span><span>add</span><span>플러스</span><span>추가</span><span>더하기</span></div></li>
-            <li><img src="./icon/uni-subtract.svg" onclick="CopyIconImg('uni-subtract.svg')"/><div class="keyword"><span>minus</span><span>subtract</span><span>마이너스</span><span>삭제</span><span>빼기</span></div></li>
-            <li><img src="./icon/uni-confirm.svg" onclick="CopyIconImg('uni-confirm.svg')"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
-            <li><img src="./icon/uni-arrow-left2.svg" onclick="CopyIconImg('uni-arrow-left2.svg')"/><div class="keyword"><span>arrow</span><span>left</span><span>화살표</span><span>이전</span><span>왼쪽</span></div></li>
-            <li><img src="./icon/uni-arrow-right2.svg" onclick="CopyIconImg('uni-arrow-right2.svg')"/><div class="keyword"><span>arrow</span><span>right</span><span>화살표</span><span>다음</span><span>오른쪽</span></div></li>
-            <li><img src="./icon/uni-arrow-down2.svg" onclick="CopyIconImg('uni-arrow-down2.svg')"/><div class="keyword"><span>arrow</span><span>down</span><span>화살표</span><span>아래</span></div></li>
-            <li><img src="./icon/uni-arrow-up2.svg" onclick="CopyIconImg('uni-arrow-up2.svg')"/><div class="keyword"><span>arrow</span><span>up</span><span>화살표</span><span>위</span></div></li>
+            <li><img src="./icon/uni-cancle.svg" class="copy-img-btn"/><div class="keyword"><span>close</span><span>cancle</span><span>del</span><span>multiply</span><span>닫기</span><span>삭제</span><span>취소</span><span>곱하기</span></div></li>
+            <li><img src="./icon/uni-add.svg" class="copy-img-btn"/><div class="keyword"><span>plus</span><span>add</span><span>플러스</span><span>추가</span><span>더하기</span></div></li>
+            <li><img src="./icon/uni-subtract.svg" class="copy-img-btn"/><div class="keyword"><span>minus</span><span>subtract</span><span>마이너스</span><span>삭제</span><span>빼기</span></div></li>
+            <li><img src="./icon/uni-confirm.svg" class="copy-img-btn"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
+            <li><img src="./icon/uni-arrow-left2.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>left</span><span>화살표</span><span>이전</span><span>왼쪽</span></div></li>
+            <li><img src="./icon/uni-arrow-right2.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>right</span><span>화살표</span><span>다음</span><span>오른쪽</span></div></li>
+            <li><img src="./icon/uni-arrow-down2.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>down</span><span>화살표</span><span>아래</span></div></li>
+            <li><img src="./icon/uni-arrow-up2.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>up</span><span>화살표</span><span>위</span></div></li>
           </ul>
           <ul>
-            <li><img src="./icon/uni-cancle-f.svg" onclick="CopyIconImg('uni-cancle-f.svg')"/><div class="keyword"><span>close</span><span>cancle</span><span>del</span><span>multiply</span><span>닫기</span><span>삭제</span><span>취소</span><span>곱하기</span></div></li>
-            <li><img src="./icon/uni-add-f.svg" onclick="CopyIconImg('uni-add-f.svg')"/><div class="keyword"><span>plus</span><span>add</span><span>플러스</span><span>추가</span><span>더하기</span></div></li>
-            <li><img src="./icon/uni-subtract-f.svg" onclick="CopyIconImg('uni-subtract-f.svg')"/><div class="keyword"><span>minus</span><span>subtract</span><span>마이너스</span><span>삭제</span><span>빼기</span></div></li>
-            <li><img src="./icon/uni-confirm-f.svg" onclick="CopyIconImg('uni-confirm-f.svg')"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
-            <li><img src="./icon/uni-arrow-left2-f.svg" onclick="CopyIconImg('uni-arrow-left2-f.svg')"/><div class="keyword"><span>arrow</span><span>left</span><span>화살표</span><span>이전</span><span>왼쪽</span></div></li>
-            <li><img src="./icon/uni-arrow-right2-f.svg" onclick="CopyIconImg('uni-arrow-right2-f.svg')"/><div class="keyword"><span>arrow</span><span>right</span><span>화살표</span><span>다음</span><span>오른쪽</span></div></li>
-            <li><img src="./icon/uni-arrow-down2-f.svg" onclick="CopyIconImg('uni-arrow-down2-f.svg')"/><div class="keyword"><span>arrow</span><span>down</span><span>화살표</span><span>아래</span></div></li>
-            <li><img src="./icon/uni-arrow-up2-f.svg" onclick="CopyIconImg('uni-arrow-up2-f.svg')"/><div class="keyword"><span>arrow</span><span>up</span><span>화살표</span><span>위</span></div></li>
+            <li><img src="./icon/uni-cancle-f.svg" class="copy-img-btn"/><div class="keyword"><span>close</span><span>cancle</span><span>del</span><span>multiply</span><span>닫기</span><span>삭제</span><span>취소</span><span>곱하기</span></div></li>
+            <li><img src="./icon/uni-add-f.svg" class="copy-img-btn"/><div class="keyword"><span>plus</span><span>add</span><span>플러스</span><span>추가</span><span>더하기</span></div></li>
+            <li><img src="./icon/uni-subtract-f.svg" class="copy-img-btn"/><div class="keyword"><span>minus</span><span>subtract</span><span>마이너스</span><span>삭제</span><span>빼기</span></div></li>
+            <li><img src="./icon/uni-confirm-f.svg" class="copy-img-btn"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
+            <li><img src="./icon/uni-arrow-left2-f.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>left</span><span>화살표</span><span>이전</span><span>왼쪽</span></div></li>
+            <li><img src="./icon/uni-arrow-right2-f.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>right</span><span>화살표</span><span>다음</span><span>오른쪽</span></div></li>
+            <li><img src="./icon/uni-arrow-down2-f.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>down</span><span>화살표</span><span>아래</span></div></li>
+            <li><img src="./icon/uni-arrow-up2-f.svg" class="copy-img-btn"/><div class="keyword"><span>arrow</span><span>up</span><span>화살표</span><span>위</span></div></li>
           </ul>
           <ul>
-            <li><img src="./icon/uni-logo-symbol.svg" onclick="CopyIconImg('uni-logo-symbol.svg')"/><div class="keyword"><span>logo</span><span>unipost</span><span>로고</span><span>유니포스트</span></div></li>
-            <li><img src="./icon/uni-check-bold.svg" onclick="CopyIconImg('uni-check-bold.svg')"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
-            <li><img src="./icon/uni-globe-f.svg" onclick="CopyIconImg('uni-globe-f.svg')"/><div class="keyword"><span>globe</span><span>지구본</span></div></li>
-            <li><img src="./icon/uni-camera-f.svg" onclick="CopyIconImg('uni-camera-f.svg')"/><div class="keyword"><span>camera</span><span>카메라</span><span>사진</span><span>촬영</span></div></li>
-            <li><img src="./icon/uni-folder-f.svg" onclick="CopyIconImg('uni-folder-f.svg')"/><div class="keyword"><span>folder</span><span>폴더</span></div></li>
-            <li><img src="./icon/uni-folder-open-f.svg" onclick="CopyIconImg('uni-folder-open-f.svg')"/><div class="keyword"><span>folder</span><span>open</span><span>폴더</span></div></li>
-            <li><img src="./icon/uni-user02-f.svg" onclick="CopyIconImg('uni-user02-f.svg')"/><div class="keyword"><span>user</span><span>person</span><span>human</span><span>사람</span><span>한명</span></div></li>
-            <li><img src="./icon/uni-users02-f.svg" onclick="CopyIconImg('uni-users02-f.svg')"/><div class="keyword"><span>user</span><span>people</span><span>human</span><span>사람</span><span>여러명</span></div></li>
-            <li><img src="./icon/uni-users01-f.svg" onclick="CopyIconImg('uni-users01-f.svg')"/><div class="keyword"><span>user</span><span>people</span><span>human</span><span>사람</span><span>여러명</span></div></li>
-            <li><img src="./icon/uni-users03-f.svg" onclick="CopyIconImg('uni-users03-f.svg')"/><div class="keyword"><span>user</span><span>people</span><span>human</span><span>사람</span><span>여러명</span></div></li>
-            <li><img src="./icon/uni-write-f.svg" onclick="CopyIconImg('uni-write-f.svg')"/><div class="keyword"><span>write</span><span>작성</span><span>등록</span></div></li>
-            <li><img src="./icon/uni-pen-f.svg" onclick="CopyIconImg('uni-pen-f.svg')"/><div class="keyword"><span>pen</span><span>write</span><span>작성</span><span>수정</span></div></li>
-            <li><img src="./icon/uni-check-bold-f.svg" onclick="CopyIconImg('uni-check-bold-f.svg')"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
-            <li><img src="./icon/uni-pin-f.svg" onclick="CopyIconImg('uni-pin-f.svg')"/><div class="keyword"><span>location</span><span>pin</span><span>위치</span><span>안내</span></div></li>
-            <li><img src="./icon/uni-clock-bold-f.svg" onclick="CopyIconImg('uni-clock-bold-f.svg')"/><div class="keyword"><span>clock</span><span>시계</span></div></li>
-            <li><img src="./icon/uni-company2-f.svg" onclick="CopyIconImg('uni-company2-f.svg')"/><div class="keyword"><span>building</span><span>company</span><span>건물</span><span>회사</span></div></li>
-            <li><img src="./icon/uni-print-f.svg" onclick="CopyIconImg('uni-print-f.svg')"/><div class="keyword"><span>print</span><span>프린터</span><span>인쇄</span></div></li>
-            <li><img src="./icon/uni-receipt2-f.svg" onclick="CopyIconImg('uni-receipt2-f.svg')"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-no-receipt4-f.svg" onclick="CopyIconImg('uni-no-receipt4-f.svg')"/><div class="keyword"><span>no</span><span>blank</span><span>receipt</span><span>doc</span><span>없음</span><span>오류</span><span>영수증</span></div></li>
-            <li><img src="./icon/uni-caution02-f.svg" onclick="CopyIconImg('uni-caution02-f.svg')"/><div class="keyword"><span>caution</span><span>주의</span><span>느낌표</span></div></li>
-            <li><img src="./icon/uni-help-f.svg" onclick="CopyIconImg('uni-help-f.svg')"/><div class="keyword"><span>help</span><span>question</span><span>물음표</span></div></li>
-            <li><img src="./icon/uni-view-detail-f.svg" onclick="CopyIconImg('uni-view-detail-f.svg')"/><div class="keyword"><span>popup</span><span>link</span><span>새창</span><span>링크</span></div></li>
-            <li><img src="./icon/uni-upsize-f.svg" onclick="CopyIconImg('uni-upsize-f.svg')"/><div class="keyword"><span>upsize</span><span>확장</span></div></li>
-            <li><img src="./icon/uni-downsize-f.svg" onclick="CopyIconImg('uni-downsize-f.svg')"/><div class="keyword"><span>downsize</span><span>축소</span></div></li>
-            <li><img src="./icon/uni-face-bad.svg" onclick="CopyIconImg('uni-face-bad.svg')"/><div class="keyword"><span>face</span><span>bad</span><span>나쁨</span></div></li>
-            <li><img src="./icon/uni-face-good.svg" onclick="CopyIconImg('uni-face-good.svg')"/><div class="keyword"><span>face</span><span>good</span><span>좋음</span></div></li>
-            <li><img src="./icon/uni-face-normal.svg" onclick="CopyIconImg('uni-face-normal.svg')"/><div class="keyword"><span>face</span><span>normal</span><span>보통</span></div></li>
-            <li><img src="./icon/uni-speech-bubble-f.svg" onclick="CopyIconImg('uni-speech-bubble-f.svg')"/><div class="keyword"><span>speech-bubble</span><span>말풍선</span></div></li>
-            <li><img src="./icon/uni-graph-f.svg" onclick="CopyIconImg('uni-graph-f.svg')"/><div class="keyword"><span>graph</span><span>그래프</span></div></li>
-            <li><img src="./icon/uni-diamond-f.svg" onclick="CopyIconImg('uni-diamond-f.svg')"/><div class="keyword"><span>diamond</span><span>마름모</span></div></li>
-            <li><img src="./icon/uni-list.svg" onclick="CopyIconImg('uni-list.svg')"/><div class="keyword"><span>list</span><span>목록</span></div></li>
+            <li><img src="./icon/uni-logo-symbol.svg" class="copy-img-btn"/><div class="keyword"><span>logo</span><span>unipost</span><span>로고</span><span>유니포스트</span></div></li>
+            <li><img src="./icon/uni-check-bold.svg" class="copy-img-btn"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
+            <li><img src="./icon/uni-globe-f.svg" class="copy-img-btn"/><div class="keyword"><span>globe</span><span>지구본</span></div></li>
+            <li><img src="./icon/uni-camera-f.svg" class="copy-img-btn"/><div class="keyword"><span>camera</span><span>카메라</span><span>사진</span><span>촬영</span></div></li>
+            <li><img src="./icon/uni-folder-f.svg" class="copy-img-btn"/><div class="keyword"><span>folder</span><span>폴더</span></div></li>
+            <li><img src="./icon/uni-folder-open-f.svg" class="copy-img-btn"/><div class="keyword"><span>folder</span><span>open</span><span>폴더</span></div></li>
+            <li><img src="./icon/uni-user02-f.svg" class="copy-img-btn"/><div class="keyword"><span>user</span><span>person</span><span>human</span><span>사람</span><span>한명</span></div></li>
+            <li><img src="./icon/uni-users02-f.svg" class="copy-img-btn"/><div class="keyword"><span>user</span><span>people</span><span>human</span><span>사람</span><span>여러명</span></div></li>
+            <li><img src="./icon/uni-users01-f.svg" class="copy-img-btn"/><div class="keyword"><span>user</span><span>people</span><span>human</span><span>사람</span><span>여러명</span></div></li>
+            <li><img src="./icon/uni-users03-f.svg" class="copy-img-btn"/><div class="keyword"><span>user</span><span>people</span><span>human</span><span>사람</span><span>여러명</span></div></li>
+            <li><img src="./icon/uni-write-f.svg" class="copy-img-btn"/><div class="keyword"><span>write</span><span>작성</span><span>등록</span></div></li>
+            <li><img src="./icon/uni-pen-f.svg" class="copy-img-btn"/><div class="keyword"><span>pen</span><span>write</span><span>작성</span><span>수정</span></div></li>
+            <li><img src="./icon/uni-check-bold-f.svg" class="copy-img-btn"/><div class="keyword"><span>check</span><span>confirm</span><span>체크</span><span>확인</span></div></li>
+            <li><img src="./icon/uni-pin-f.svg" class="copy-img-btn"/><div class="keyword"><span>location</span><span>pin</span><span>위치</span><span>안내</span></div></li>
+            <li><img src="./icon/uni-clock-bold-f.svg" class="copy-img-btn"/><div class="keyword"><span>clock</span><span>시계</span></div></li>
+            <li><img src="./icon/uni-company2-f.svg" class="copy-img-btn"/><div class="keyword"><span>building</span><span>company</span><span>건물</span><span>회사</span></div></li>
+            <li><img src="./icon/uni-print-f.svg" class="copy-img-btn"/><div class="keyword"><span>print</span><span>프린터</span><span>인쇄</span></div></li>
+            <li><img src="./icon/uni-receipt2-f.svg" class="copy-img-btn"/><div class="keyword"><span>receipt</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-no-receipt4-f.svg" class="copy-img-btn"/><div class="keyword"><span>no</span><span>blank</span><span>receipt</span><span>doc</span><span>없음</span><span>오류</span><span>영수증</span></div></li>
+            <li><img src="./icon/uni-caution02-f.svg" class="copy-img-btn"/><div class="keyword"><span>caution</span><span>주의</span><span>느낌표</span></div></li>
+            <li><img src="./icon/uni-help-f.svg" class="copy-img-btn"/><div class="keyword"><span>help</span><span>question</span><span>물음표</span></div></li>
+            <li><img src="./icon/uni-view-detail-f.svg" class="copy-img-btn"/><div class="keyword"><span>popup</span><span>link</span><span>새창</span><span>링크</span></div></li>
+            <li><img src="./icon/uni-upsize-f.svg" class="copy-img-btn"/><div class="keyword"><span>upsize</span><span>확장</span></div></li>
+            <li><img src="./icon/uni-downsize-f.svg" class="copy-img-btn"/><div class="keyword"><span>downsize</span><span>축소</span></div></li>
+            <li><img src="./icon/uni-face-bad.svg" class="copy-img-btn"/><div class="keyword"><span>face</span><span>bad</span><span>나쁨</span></div></li>
+            <li><img src="./icon/uni-face-good.svg" class="copy-img-btn"/><div class="keyword"><span>face</span><span>good</span><span>좋음</span></div></li>
+            <li><img src="./icon/uni-face-normal.svg" class="copy-img-btn"/><div class="keyword"><span>face</span><span>normal</span><span>보통</span></div></li>
+            <li><img src="./icon/uni-speech-bubble-f.svg" class="copy-img-btn"/><div class="keyword"><span>speech-bubble</span><span>말풍선</span></div></li>
+            <li><img src="./icon/uni-graph-f.svg" class="copy-img-btn"/><div class="keyword"><span>graph</span><span>그래프</span></div></li>
+            <li><img src="./icon/uni-diamond-f.svg" class="copy-img-btn"/><div class="keyword"><span>diamond</span><span>마름모</span></div></li>
+            <li><img src="./icon/uni-list.svg" class="copy-img-btn"/><div class="keyword"><span>list</span><span>목록</span></div></li>
           </ul>
           <ul>
-            <li><img src="./images/ico-jstree-car.svg" onclick="CopyIconImg('ico-jstree-car.svg')"/><div class="keyword"><span>jstree</span><span>car</span><span>자동차</span></div></li>
-            <li><img src="./images/ico-jstree-meeting-room.svg" onclick="CopyIconImg('ico-jstree-meeting-room.svg')"/><div class="keyword"><span>jstree</span><span>room</span><span>회의실</span></div></li>
-            <li><img src="./images/ico-jstree-equipment.svg" onclick="CopyIconImg('ico-jstree-equipment.svg')"/><div class="keyword"><span>jstree</span><span>equipment</span><span>비품</span><span>장비</span></div></li>
-            <li><img src="./images/img-mark-star.svg" onclick="CopyIconImg('img-mark-star.svg')"/><div class="keyword"><span>star</span><span>favorite</span><span>별</span><span>즐겨찾기</span></div></li>
-            <li><img src="./images/img-mark-star-on.svg" onclick="CopyIconImg('img-mark-star-on.svg')"/><div class="keyword"><span>star</span><span>favorite</span><span>별</span><span>즐겨찾기</span></div></li>
-            <li><img src="./images/ico-speech-bubble.svg" onclick="CopyIconImg('ico-speech-bubble.svg')"/><div class="keyword"><span>speech-bubble</span><span>말풍선</span></div></li>
+            <li><img src="./images/ico-jstree-car.svg" class="copy-img-btn"/><div class="keyword"><span>jstree</span><span>car</span><span>자동차</span></div></li>
+            <li><img src="./images/ico-jstree-meeting-room.svg" class="copy-img-btn"/><div class="keyword"><span>jstree</span><span>room</span><span>회의실</span></div></li>
+            <li><img src="./images/ico-jstree-equipment.svg" class="copy-img-btn"/><div class="keyword"><span>jstree</span><span>equipment</span><span>비품</span><span>장비</span></div></li>
+            <li><img src="./images/img-mark-star.svg" class="copy-img-btn"/><div class="keyword"><span>star</span><span>favorite</span><span>별</span><span>즐겨찾기</span></div></li>
+            <li><img src="./images/img-mark-star-on.svg" class="copy-img-btn"/><div class="keyword"><span>star</span><span>favorite</span><span>별</span><span>즐겨찾기</span></div></li>
+            <li><img src="./images/ico-speech-bubble.svg" class="copy-img-btn"/><div class="keyword"><span>speech-bubble</span><span>말풍선</span></div></li>
           </ul>
           <ul class="size-s">
-            <li><img src="./images/img-rotate-r.svg" onclick="CopyIconImg('img-rotate-r.svg')"/><div class="keyword"><span>rotate</span><span>회전</span><span>오른쪽</span></div></li>
-            <li><img src="./images/img-rotate-l.svg" onclick="CopyIconImg('img-rotate-l.svg')"/><div class="keyword"><span>rotate</span><span>회전</span><span>왼쪽</span></div></li>
-            <li><img src="./images/img-download.svg" onclick="CopyIconImg('img-download.svg')"/><div class="keyword"><span>download</span><span>다운로드</span></div></li>
-            <li><img src="./images/img-delete-bk.svg" onclick="CopyIconImg('img-delete-bk.svg')"/><div class="keyword"><span>close</span><span>cancle</span><span>del</span><span>multiply</span><span>닫기</span><span>삭제</span><span>취소</span><span>곱하기</span></div></li>
-            <li><img src="./images/ico-popup-bk.svg" onclick="CopyIconImg('ico-popup-bk.svg')"/><div class="keyword"><span>popup</span><span>새창</span><span>팝업</span></div></li>
-            <li><img src="./images/ico-btn-logout.svg" onclick="CopyIconImg('ico-btn-logout.svg')"/><div class="keyword"><span>logout</span><span>로그아웃</span></div></li>
-            <li><img src="./images/ico-btn-myhome.svg" onclick="CopyIconImg('ico-btn-myhome.svg')"/><div class="keyword"><span>home</span><span>홈</span></div></li>
+            <li><img src="./images/img-rotate-r.svg" class="copy-img-btn"/><div class="keyword"><span>rotate</span><span>회전</span><span>오른쪽</span></div></li>
+            <li><img src="./images/img-rotate-l.svg" class="copy-img-btn"/><div class="keyword"><span>rotate</span><span>회전</span><span>왼쪽</span></div></li>
+            <li><img src="./images/img-download.svg" class="copy-img-btn"/><div class="keyword"><span>download</span><span>다운로드</span></div></li>
+            <li><img src="./images/img-delete-bk.svg" class="copy-img-btn"/><div class="keyword"><span>close</span><span>cancle</span><span>del</span><span>multiply</span><span>닫기</span><span>삭제</span><span>취소</span><span>곱하기</span></div></li>
+            <li><img src="./images/ico-popup-bk.svg" class="copy-img-btn"/><div class="keyword"><span>popup</span><span>새창</span><span>팝업</span></div></li>
+            <li><img src="./images/ico-btn-logout.svg" class="copy-img-btn"/><div class="keyword"><span>logout</span><span>로그아웃</span></div></li>
+            <li><img src="./images/ico-btn-myhome.svg" class="copy-img-btn"/><div class="keyword"><span>home</span><span>홈</span></div></li>
           </ul>
           <ul>
-            <li><img src="./icon/board-doc1.svg" onclick="CopyIconImg('board-doc1.svg')"/><div class="keyword"><span>doc</span><span>문서</span></div></li>
-            <li><img src="./icon/board-certification.svg" onclick="CopyIconImg('board-certification.svg')"/><div class="keyword"><span>certification</span><span>증명서</span><span>인증서</span></div></li>
-            <li><img src="./icon/board-doc-signature.svg" onclick="CopyIconImg('board-doc-signature.svg')"/><div class="keyword"><span>doc</span><span>signature</span><span>서명</span><span>싸인</span></div></li>
-            <li><img src="./icon/board-doc-stamp.svg" onclick="CopyIconImg('board-doc-stamp.svg')"/><div class="keyword"><span>doc</span><span>contract</span><span>문서</span><span>계약서</span></div></li>
-            <li><img src="./icon/board-doc-user.svg" onclick="CopyIconImg('board-doc-user.svg')"/><div class="keyword"><span>doc</span><span>user</span><span>문서</span></div></li>
-            <li><img src="./icon/board-invoice-coin.svg" onclick="CopyIconImg('board-invoice-coin.svg')"/><div class="keyword"><span>doc</span><span>invoice</span><span>영수증</span><span>계산서</span></div></li>
-            <li><img src="./icon/board-money.svg" onclick="CopyIconImg('board-money.svg')"/><div class="keyword"><span>money</span><span>돈</span><span>지폐</span></div></li>
-            <li><img src="./icon/board-calendar-finger.svg" onclick="CopyIconImg('board-calendar-finger.svg')"/><div class="keyword"><span>calendar</span><span>신청</span><span>등록</span></div></li>
-            <li><img src="./icon/board-user-coin.svg" onclick="CopyIconImg('board-user-coin.svg')"/><div class="keyword"><span>user</span><span>coin</span><span>사람</span><span>돈</span></div></li>
-            <li><img src="./icon/board-doc-clock.svg" onclick="CopyIconImg('board-doc-clock.svg')"/><div class="keyword"><span>doc</span><span>clock</span><span>문서</span></div></li>
-            <li><img src="./icon/board-card.svg" onclick="CopyIconImg('board-card.svg')"/><div class="keyword"><span>card</span><span>카드</span></div></li>
-            <li><img src="./icon/board-basket.svg" onclick="CopyIconImg('board-basket.svg')"/><div class="keyword"><span>basket</span><span>장바구니</span><span>구매</span></div></li>
-            <li><img src="./icon/board-airplane.svg" onclick="CopyIconImg('board-airplane.svg')"/><div class="keyword"><span>airplane</span><span>비행기</span><span>휴가</span></div></li>
+            <li><img src="./icon/board-doc1.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>문서</span></div></li>
+            <li><img src="./icon/board-certification.svg" class="copy-img-btn"/><div class="keyword"><span>certification</span><span>증명서</span><span>인증서</span></div></li>
+            <li><img src="./icon/board-doc-signature.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>signature</span><span>서명</span><span>싸인</span></div></li>
+            <li><img src="./icon/board-doc-stamp.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>contract</span><span>문서</span><span>계약서</span></div></li>
+            <li><img src="./icon/board-doc-user.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>user</span><span>문서</span></div></li>
+            <li><img src="./icon/board-invoice-coin.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>invoice</span><span>영수증</span><span>계산서</span></div></li>
+            <li><img src="./icon/board-money.svg" class="copy-img-btn"/><div class="keyword"><span>money</span><span>돈</span><span>지폐</span></div></li>
+            <li><img src="./icon/board-calendar-finger.svg" class="copy-img-btn"/><div class="keyword"><span>calendar</span><span>신청</span><span>등록</span></div></li>
+            <li><img src="./icon/board-user-coin.svg" class="copy-img-btn"/><div class="keyword"><span>user</span><span>coin</span><span>사람</span><span>돈</span></div></li>
+            <li><img src="./icon/board-doc-clock.svg" class="copy-img-btn"/><div class="keyword"><span>doc</span><span>clock</span><span>문서</span></div></li>
+            <li><img src="./icon/board-card.svg" class="copy-img-btn"/><div class="keyword"><span>card</span><span>카드</span></div></li>
+            <li><img src="./icon/board-basket.svg" class="copy-img-btn"/><div class="keyword"><span>basket</span><span>장바구니</span><span>구매</span></div></li>
+            <li><img src="./icon/board-airplane.svg" class="copy-img-btn"/><div class="keyword"><span>airplane</span><span>비행기</span><span>휴가</span></div></li>
           </ul>
         </div>
       </div>
