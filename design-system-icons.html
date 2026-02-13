@@ -2,153 +2,295 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Unipost Icons Library - Full Restored</title>
+    <title>Unipost Icons Library</title>
     <style>
         :root {
             --primary-blue: #0046FF;
+            --search-border-color: #ccc;
             --border-color: #eee;
             --text-main: #111;
-            --text-sub: #666;
+            --text-sub: #888;
+        }
+        body {
+            margin: 0; 
+            font-family: 'Pretendard', sans-serif; 
+            color: var(--text-main);
+            background: #FFF; 
         }
 
-        body { margin: 0; font-family: 'Pretendard', sans-serif; background: #FFF; color: var(--text-main); }
-        .container { max-width: 1400px; margin: 0 auto; padding: 60px 40px; }
+        /* 검색바 */
+        .search-container {
+            display: flex;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            padding: 80px 0 40px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+        .search-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 15px 25px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            border: 2px solid var(--search-border-color);
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .search-input:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 10px 20px rgba(0, 70, 255, 0.1);
+        }
+        .container {
+            max-width: 1400px; 
+            padding: 0 40px 60px;
+            margin: 0 auto; 
+        }
 
-        /* 대분류 컨테이너 */
+        /* 대분류 */
         .main-card {
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+            overflow: hidden;
             margin-bottom: 50px;
             padding-bottom: 12px;
-            overflow: hidden;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
             box-shadow: 0 8px 60px rgba(0,0,0,.06);
+            transition: opacity 0.3s ease;
         }
+        
+        /* 검색 결과 없을 때 카드 숨김 */
+        .main-card.hidden { display: none; }
 
         .main-header {
-            padding: 20px 32px;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #000;
             display: flex;
             align-items: center;
             gap: 12px;
             margin-bottom: 12px;
+            padding: 20px 32px;
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #000;
+            border-bottom: 1px solid var(--border-color);
         }
         .main-header::before {
             content: '';
             width: 4px;
             height: 20px;
-            background: var(--primary-blue);
             border-radius: 4px;
+            background: var(--primary-blue);
         }
 
-        /* 소분류 한 줄 */
+        /* 소분류 */
         .sub-row {
             display: flex;
             padding: 20px 32px;
+            transition: opacity 0.3s ease;
         }
-        .sub-row:last-child { border-bottom: none; }
+        .sub-row.hidden { display: none; }
+
         .sub-info {
-            width: 200px;
             flex-shrink: 0;
+            width: 200px;
         }
         .sub-info h2 {
-            font-size: 1.15rem;
-            margin: 0 0 8px 0;
-            font-weight: 700;
-            color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 6px;
+            margin: 0 0 8px 0;
+            font-weight: 700;
+            font-size: 1.15rem;
+            color: var(--text-main);
         }
         .sub-count {
-            font-size: 0.85rem;
-            color: var(--primary-blue);
-            width: 24px;
-            height: 24px;
             display: inline-flex;
-            background-color: rgb(0 70 255 / 8%);
-            border-radius: 50%;
             align-items: center;
             justify-content: center;
-        }
-        /* 아이콘 그리드 */
-        .grid {
-            flex-grow: 1;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
-            gap: 15px;
+            width: 24px;
+            height: 24px;
+            font-size: 0.85rem;
+            color: var(--primary-blue);
+            border-radius: 50%;
+            background-color: rgb(0 70 255 / 8%);
         }
 
+        /* 아이콘 그리드 */
+        .grid {
+            display: grid;
+            gap: 15px;
+            flex-grow: 1;
+            grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+        }
         .icon-item {
-            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 5px;
+            width: 120px;
+            height: 120px;
             border: 1px solid #eee;
             border-radius: 12px;
-            padding: 20px 10px 12px;
-            text-align: center;
+            background: #fff;
             cursor: pointer;
             transition: all 0.2s ease;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            box-sizing: border-box;
+        }
+        
+        /* 검색 비활성 */
+        .icon-item.dimmed {
+            opacity: 0.1;
+            filter: grayscale(1);
+            pointer-events: none;
+        }
+
+        /* 검색 활성 */
+        .icon-item.highlight {
+            border-width: 2px;
+            border-color: var(--primary-blue);
+            background: rgba(0,70,255,0.02);
         }
         .icon-item:hover {
             border-color: var(--primary-blue);
-            box-shadow: 0 6px 15px rgba(0, 70, 255, 0.1);
+            box-shadow: 0 6px 15px rgba(0,70,255,0.1);
             transform: translateY(-2px);
         }
-
         .icon-img-box {
-            width: 100%;
-            height: 100%;
-            max-width: 28px;
-            max-height: 28px;
-            margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 100%;
+            height: 100%;
+            max-width: 30px;
+            max-height: 30px;
+            margin: 0 auto;
         }
-        .icon-img-box img { max-width: 100%; height: auto; }
-        .icon-name { font-size: 0.75rem; color: var(--text-sub); word-break: break-all; line-height: 1.3; }
+        .icon-img-box img {
+            max-width: 100%;
+            height: auto;
+        }
+        .icon-name {
+            overflow: hidden;
+            position: relative;
+            top: 20px;
+            width: 100%;
+            padding: 0 10px;
+            text-align: center;
+            text-overflow: ellipsis;
+            word-wrap: break-word;
+            white-space: nowrap;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            box-sizing: border-box;
+        }
 
-        /* 토스트 알림 */
         #toast {
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            background: var(--primary-blue); color: #fff; padding: 14px 32px; border-radius: 50px;
-            display: none; z-index: 1000; font-weight: 700; box-shadow: 0 10px 25px rgba(0, 70, 255, 0.3);
+            display: none;
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            padding: 14px 32px;
+            font-weight: 700;
+            color: #fff;
+            border-radius: 50px;
+            background: var(--primary-blue);
+            box-shadow: 0 10px 25px rgba(0,70,255,0.3);
+            z-index: 1000;
+            transform: translateX(-50%);
         }
     </style>
 </head>
 <body>
+
+<div class="search-container">
+    <div class="search-wrapper">
+        <input type="text" class="search-input" id="iconSearch" placeholder="아이콘 이름 또는 키워드를 검색하세요 (예: home, 경비)">
+    </div>
+</div>
 
 <div class="container" id="lib-root"></div>
 <div id="toast">✨ 이미지가 복사되었습니다! PPT에 바로 붙여넣으세요. ✨</div>
 
 <script>
 /**
- * 💡 데이터 구조: 포탈, SaaS서비스, SaaS앱 3대 체계 유지
+ * 💡 데이터 구조 보강: keywords 필드를 추가하여 검색 효율을 높였습니다.
  */
 const iconConfig = [
-    {
-        main: "포탈",
-        subs: [
-            { name: "대시보드", icons: ["uni-home.svg", "uni-search.svg", "uni-bell.svg"] },
-            { name: "공통 UI", icons: ["uni-plus.svg", "uni-close.svg", "uni-check.svg", "uni-refresh.svg", "uni-setting.svg"] }
-        ]
-    },
+    // {
+    //     main: "포탈",
+    //     subs: [
+    //         { 
+    //             name: "대시보드", 
+    //             icons: [
+    //                 { file: "uni-home.svg", kw: "home 홈 메인" },
+    //                 { file: "uni-search.svg", kw: "search 검색 찾기 돋보기" },
+    //                 { file: "uni-bell.svg", kw: "bell 알림 공지 bell" }
+    //             ] 
+    //         },
+    //         { 
+    //             name: "공통 UI", 
+    //             icons: [
+    //                 { file: "uni-plus.svg", kw: "plus 추가 더하기 add" },
+    //                 { file: "uni-close.svg", kw: "close 닫기 삭제 x" },
+    //                 { file: "uni-check.svg", kw: "check 확인 완료" },
+    //                 { file: "uni-refresh.svg", kw: "refresh 새로고침 업데이트" },
+    //                 { file: "uni-setting.svg", kw: "setting 설정 관리" }
+    //             ] 
+    //         }
+    //     ]
+    // },
     {
         main: "SaaS서비스",
         subs: [
-            { name: "경비처리(PES)", icons: ["uni-receipt.svg", "uni-card.svg", "uni-money.svg"] },
-            { name: "전자결재", icons: ["uni-approval.svg", "uni-doc.svg", "uni-signature.svg"] }
+            { 
+                name: "서비스", 
+                icons: [
+                    { file: "ico-unipost-symbol.svg", kw: "unipost 로고 유니포스트" },
+                    { file: "uni-main-pes2.svg", kw: "pes 경비처리" },
+                    { file: "uni-main-approval2.svg", kw: "approval 전자결재" },
+                    { file: "uni-main-avs2.svg", kw: "avs 인사관리" },
+                    { file: "uni-main-lc2.svg", kw: "lc 근로계약" },
+                    { file: "uni-main-community2.svg", kw: "community 커뮤니티" },
+                    { file: "uni-main-admin2.svg", kw: "admin 관리자" },
+                    { file: "uni-main-econ2.svg", kw: "econ 전자계약" },
+                    { file: "uni-main-system2.svg", kw: "system 시스템" },
+                    { file: "uni-main-tax2.svg", kw: "tax 세금계산서" }
+                ] 
+            },
+            { 
+                name: "전자결재", 
+                icons: [
+                    { file: "uni-approval.svg", kw: "approval 결재 승인" },
+                    { file: "uni-doc.svg", kw: "doc 문서 서류" },
+                    { file: "uni-signature.svg", kw: "signature 서명 싸인" }
+                ] 
+            }
         ]
     },
     {
         main: "SaaS앱",
         subs: [
-            { name: "모바일 홈", icons: ["m-home.svg", "m-menu.svg", "m-user.svg"] },
-            { name: "푸시 & 알림", icons: ["m-noti.svg", "m-badge.svg", "m-alert.svg"] }
+            { 
+                name: "모바일 홈", 
+                icons: [
+                    { file: "m-home.svg", kw: "mobile home 모바일 홈" },
+                    { file: "m-menu.svg", kw: "menu 메뉴 전체보기" },
+                    { file: "m-user.svg", kw: "user 사용자 마이페이지" }
+                ] 
+            },
+            { 
+                name: "푸시 & 알림", 
+                icons: [
+                    { file: "m-noti.svg", kw: "notification 알림 푸시" },
+                    { file: "m-badge.svg", kw: "badge 배지 알림" },
+                    { file: "m-alert.svg", kw: "alert 경고 알림" }
+                ] 
+            }
         ]
     }
 ];
@@ -170,11 +312,15 @@ function render() {
                 </div>
                 <div class="grid">`;
                 
-                sub.icons.forEach(icon => {
+                sub.icons.forEach(iconObj => {
+                    // 💡 data-keywords 속성을 추가하여 검색 시 참조하도록 함
                     html += `
-                        <div class="icon-item" onclick="copyImage('${ICON_PATH}${icon}')">
-                            <div class="icon-img-box"><img src="${ICON_PATH}${icon}" alt="${icon}"></div>
-                            <div class="icon-name">${icon}</div>
+                        <div class="icon-item" 
+                             data-name="${iconObj.file.toLowerCase()}" 
+                             data-keywords="${iconObj.kw.toLowerCase()}"
+                             onclick="copyImage('${ICON_PATH}${iconObj.file}')">
+                            <div class="icon-img-box"><img src="${ICON_PATH}${iconObj.file}" alt="${iconObj.file}"></div>
+                            <div class="icon-name">${iconObj.file}</div>
                         </div>`;
                 });
 
@@ -183,6 +329,55 @@ function render() {
         html += `</div>`;
     });
     root.innerHTML = html;
+    
+    // 💡 렌더링 후 검색 이벤트 바인딩
+    initSearch();
+}
+
+// 💡 검색 로직 함수
+function initSearch() {
+    const searchInput = document.getElementById('iconSearch');
+    const cards = document.querySelectorAll('.main-card');
+    const rows = document.querySelectorAll('.sub-row');
+    const items = document.querySelectorAll('.icon-item');
+
+    searchInput.addEventListener('input', (e) => {
+        const val = e.target.value.toLowerCase().trim();
+        
+        if (val === "") {
+            // 검색어가 없으면 모두 초기화
+            items.forEach(el => el.classList.remove('dimmed', 'highlight'));
+            rows.forEach(el => el.classList.remove('hidden'));
+            cards.forEach(el => el.classList.remove('hidden'));
+            return;
+        }
+
+        items.forEach(item => {
+            const name = item.getAttribute('data-name');
+            const keywords = item.getAttribute('data-keywords');
+            
+            if (name.includes(val) || keywords.includes(val)) {
+                item.classList.remove('dimmed');
+                item.classList.add('highlight');
+            } else {
+                item.classList.add('dimmed');
+                item.classList.remove('highlight');
+            }
+        });
+
+        // 비어있는 섹션 처리 (선택사항: 검색 결과가 없는 줄이나 카드를 숨기고 싶으면 활성화)
+        rows.forEach(row => {
+            const visibleItems = row.querySelectorAll('.icon-item:not(.dimmed)');
+            if (visibleItems.length === 0) row.classList.add('hidden');
+            else row.classList.remove('hidden');
+        });
+
+        cards.forEach(card => {
+            const visibleRows = card.querySelectorAll('.sub-row:not(.hidden)');
+            if (visibleRows.length === 0) card.classList.add('hidden');
+            else card.classList.remove('hidden');
+        });
+    });
 }
 
 async function copyImage(url) {
@@ -190,7 +385,6 @@ async function copyImage(url) {
         const response = await fetch(url);
         const blob = await response.blob();
         
-        // PPT 호환성을 위해 SVG를 고해상도 PNG로 변환 후 복사
         const img = new Image();
         const svgUrl = URL.createObjectURL(blob);
         img.onload = () => {
@@ -209,7 +403,7 @@ async function copyImage(url) {
         img.src = svgUrl;
     } catch (e) {
         console.error(e);
-        alert("복사 실패! 서버 환경에서 테스트해 주세요.");
+        alert("복사 실패! 서버(http) 환경에서 확인해 주세요.");
     }
 }
 
