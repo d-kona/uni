@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Unipost Icons Library - Full Restored</title>
+    <style>
+        :root {
+            --primary-blue: #0046FF;
+            --border-color: #eee;
+            --text-main: #111;
+            --text-sub: #666;
+        }
+
+        body { margin: 0; font-family: 'Pretendard', sans-serif; background: #FFF; color: var(--text-main); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 60px 40px; }
+
+        /* 대분류 컨테이너 */
+        .main-card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 50px;
+            padding-bottom: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 60px rgba(0,0,0,.06);
+        }
+
+        .main-header {
+            padding: 20px 32px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .main-header::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--primary-blue);
+            border-radius: 4px;
+        }
+
+        /* 소분류 한 줄 */
+        .sub-row {
+            display: flex;
+            padding: 20px 32px;
+        }
+        .sub-row:last-child { border-bottom: none; }
+        .sub-info {
+            width: 200px;
+            flex-shrink: 0;
+        }
+        .sub-info h2 {
+            font-size: 1.15rem;
+            margin: 0 0 8px 0;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sub-count {
+            font-size: 0.85rem;
+            color: var(--primary-blue);
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            background-color: rgb(0 70 255 / 8%);
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+        }
+        /* 아이콘 그리드 */
+        .grid {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+            gap: 15px;
+        }
+
+        .icon-item {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 20px 10px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .icon-item:hover {
+            border-color: var(--primary-blue);
+            box-shadow: 0 6px 15px rgba(0, 70, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .icon-img-box {
+            width: 100%;
+            height: 100%;
+            max-width: 28px;
+            max-height: 28px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .icon-img-box img { max-width: 100%; height: auto; }
+        .icon-name { font-size: 0.75rem; color: var(--text-sub); word-break: break-all; line-height: 1.3; }
+
+        /* 토스트 알림 */
+        #toast {
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: var(--primary-blue); color: #fff; padding: 14px 32px; border-radius: 50px;
+            display: none; z-index: 1000; font-weight: 700; box-shadow: 0 10px 25px rgba(0, 70, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="lib-root"></div>
+<div id="toast">✨ 이미지가 복사되었습니다! PPT에 바로 붙여넣으세요. ✨</div>
+
+<script>
+/**
+ * 💡 데이터 구조: 포탈, SaaS서비스, SaaS앱 3대 체계 유지
+ */
+const iconConfig = [
+    {
+        main: "포탈",
+        subs: [
+            { name: "대시보드", icons: ["uni-home.svg", "uni-search.svg", "uni-bell.svg"] },
+            { name: "공통 UI", icons: ["uni-plus.svg", "uni-close.svg", "uni-check.svg", "uni-refresh.svg", "uni-setting.svg"] }
+        ]
+    },
+    {
+        main: "SaaS서비스",
+        subs: [
+            { name: "경비처리(PES)", icons: ["uni-receipt.svg", "uni-card.svg", "uni-money.svg"] },
+            { name: "전자결재", icons: ["uni-approval.svg", "uni-doc.svg", "uni-signature.svg"] }
+        ]
+    },
+    {
+        main: "SaaS앱",
+        subs: [
+            { name: "모바일 홈", icons: ["m-home.svg", "m-menu.svg", "m-user.svg"] },
+            { name: "푸시 & 알림", icons: ["m-noti.svg", "m-badge.svg", "m-alert.svg"] }
+        ]
+    }
+];
+
+const ICON_PATH = "./icon/"; 
+
+function render() {
+    const root = document.getElementById('lib-root');
+    let html = "";
+
+    iconConfig.forEach(cat => {
+        html += `<div class="main-card">
+            <div class="main-header">${cat.main}</div>`;
+        
+        cat.subs.forEach(sub => {
+            html += `<div class="sub-row">
+                <div class="sub-info">
+                    <h2>${sub.name}<span class="sub-count">${sub.icons.length}</span></h2>
+                </div>
+                <div class="grid">`;
+                
+                sub.icons.forEach(icon => {
+                    html += `
+                        <div class="icon-item" onclick="copyImage('${ICON_PATH}${icon}')">
+                            <div class="icon-img-box"><img src="${ICON_PATH}${icon}" alt="${icon}"></div>
+                            <div class="icon-name">${icon}</div>
+                        </div>`;
+                });
+
+            html += `</div></div>`;
+        });
+        html += `</div>`;
+    });
+    root.innerHTML = html;
+}
+
+async function copyImage(url) {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        
+        // PPT 호환성을 위해 SVG를 고해상도 PNG로 변환 후 복사
+        const img = new Image();
+        const svgUrl = URL.createObjectURL(blob);
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width * 4; 
+            canvas.height = img.height * 4;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(pngBlob => {
+                const item = new ClipboardItem({ "image/png": pngBlob });
+                navigator.clipboard.write([item]);
+                showToast();
+                URL.revokeObjectURL(svgUrl);
+            }, 'image/png');
+        };
+        img.src = svgUrl;
+    } catch (e) {
+        console.error(e);
+        alert("복사 실패! 서버 환경에서 테스트해 주세요.");
+    }
+}
+
+function showToast() {
+    const t = document.getElementById('toast');
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2000);
+}
+
+render();
+</script>
+</body>
+</html>
