@@ -221,7 +221,7 @@
             display: none;
         }
 
-        /* 접기/펴기 버튼 */
+        /* 토글 버튼 */
         .fold-btn {
             margin-left: auto;
             cursor: pointer;
@@ -730,7 +730,12 @@ function initSearch() {
         const val = e.target.value.toLowerCase().trim();
         if (val === "") {
             items.forEach(el => el.classList.remove('dimmed', 'highlight'));
-            rows.forEach(el => el.classList.remove('hidden'));
+            rows.forEach(el => {
+                el.classList.remove('hidden');
+                const allItems = el.querySelectorAll('.icon-item');
+                const badge = el.querySelector('.sub-count');
+                if (badge) badge.innerText = allItems.length;
+            });
             cards.forEach(el => el.classList.remove('hidden'));
             return;
         }
@@ -749,8 +754,15 @@ function initSearch() {
 
         rows.forEach(row => {
             const visibleItems = row.querySelectorAll('.icon-item:not(.dimmed)');
-            if (visibleItems.length === 0) row.classList.add('hidden');
-            else row.classList.remove('hidden');
+            const countBadge = row.querySelector('.sub-count');
+            if (countBadge) {
+                countBadge.innerText = visibleItems.length;
+            }
+            if (visibleItems.length === 0) {
+                row.classList.add('hidden');
+            } else {
+                row.classList.remove('hidden');
+            }
         });
 
         cards.forEach(card => {
@@ -804,7 +816,7 @@ async function copyImage(url) {
 function toggleFold(index, btn) {
     const card = document.getElementById(`card-${index}`);
     const isFolded = card.classList.toggle('is-folded');
-    btn.innerText = isFolded ? '열기' : '닫기';
+    btn.innerText = isFolded ? '열기' : '접기';
 }
 
 function showToast() {
