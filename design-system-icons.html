@@ -726,7 +726,7 @@ async function copyImage(url) {
         const svgUrl = URL.createObjectURL(blob);
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            const targetWidth = 800;
+            const targetWidth = 600;
             const scaleFactor = targetWidth / img.width;
             const targetHeight = img.height * scaleFactor;
             canvas.width = targetWidth;
